@@ -4,6 +4,7 @@ import { Group } from '../../models/group.model';
 import { Expense } from '../../models/expense.model';
 import { AuthService } from '../auth/auth';
 import runInContext from '../../decorators/run-in-context-decorator';
+import { update } from 'firebase/database';
 
 @Injectable({
   providedIn: 'root'
@@ -110,6 +111,63 @@ export class GroupsService {
       return newGroup;
     } catch (error) {
       console.error(`Erro ao criar o grupo "${groupName}":`, error);
+      throw error;
+    }
+  }
+
+  @runInContext()
+  async joinGroup(groupId: string): Promise<Group> {
+    const userId = this.authService.currentUser()?.uid;
+    if (!userId) {
+      throw new Error('Nenhum usuário autenticado para entrar em um grupo.');
+    }
+
+    const groupRef = ref(this.db, `groups/${groupId}`);
+
+    try {
+      // 1. Verificar se o grupo existe
+      const groupSnapshot = await get(groupRef);
+      if (!groupSnapshot.exists()) {
+        throw new Error('Grupo não encontrado.');
+      }
+
+      const groupDataFromDb = groupSnapshot.val();
+
+      // 2. Verificar se o usuário já é membro (usando a estrutura de objeto)
+      if (groupDataFromDb.memberIds && groupDataFromDb.memberIds[userId]) {
+        console.warn('Usuário já é membro deste grupo.');
+        // Se já for membro, apenas retorne os dados locais (convertendo memberIds para array)
+        return {
+          id: groupId,
+          ...groupDataFromDb,
+          memberIds: Object.keys(groupDataFromDb.memberIds)
+        };
+      }
+
+      // 3. Preparar a atualização atômica para as duas localizações no DB
+      const updates: { [key: string]: any } = {};
+      updates[`groups/${groupId}/memberIds/${userId}`] = true; // Adiciona usuário ao grupo
+      updates[`user_groups/${userId}/${groupId}`] = true;      // Adiciona grupo ao usuário
+
+      await update(ref(this.db), updates);
+
+      // 4. Preparar o objeto local para o sinal
+      // (Seguindo seu padrão de `createGroup`, convertemos o objeto memberIds em um array)
+      const updatedMemberIds = groupDataFromDb.memberIds ? [...Object.keys(groupDataFromDb.memberIds), userId] : [userId];
+
+      const joinedGroup: Group = {
+        id: groupId,
+        ...groupDataFromDb,
+        memberIds: updatedMemberIds // Armazena como array localmente
+      };
+
+      // 5. Atualizar o sinal local para incluir este novo grupo
+      this._groups.update(currentGroups => [...(currentGroups || []), joinedGroup]);
+      
+      return joinedGroup;
+
+    } catch (error) {
+      console.error(`Erro ao tentar entrar no grupo "${groupId}":`, error);
       throw error;
     }
   }

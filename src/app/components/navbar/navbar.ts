@@ -1,16 +1,33 @@
-import { Component, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, inject, signal } from '@angular/core';
+import { Router, RouterModule } from '@angular/router';
+import { AuthService } from '../../Services/auth/auth';
 
 @Component({
   selector: 'app-navbar',
-  imports: [],
+  imports: [
+    RouterModule
+  ],
   templateUrl: './navbar.html',
   styleUrl: './navbar.scss'
 })
 export class Navbar {
   private router = inject(Router);
+  private authService = inject(AuthService);
+
+  isMobileMenuOpen = signal<boolean>(false);
+
+  toggleMobileMenu() {
+    this.isMobileMenuOpen.update(value => !value);
+  }
   
   navigate(route: string) {
     this.router.navigate([route]);
+    this.isMobileMenuOpen.set(false);
   }
+
+  logout() {
+    this.authService.logout();
+    this.router.navigate(['/login']);
+  }
+
 }

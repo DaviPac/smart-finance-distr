@@ -1,67 +1,115 @@
-<div class="p-4">
-  <div class="flex justify-between items-center mb-4">
-    <h2 class="text-2xl font-bold">Meus Grupos</h2>
+<div class="p-4 md:p-8 bg-gray-50 min-h-screen">
+  
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-3xl font-bold text-gray-800">Meus Grupos</h2>
   </div>
   
   @if (loading()) {
     <div class="space-y-3 animate-pulse">
       @for (_ of [1, 2, 3]; track $index) {
-        <div class="p-4 bg-gray-200 rounded-lg shadow h-16"></div>
+        <div class="p-4 bg-white rounded-lg shadow-md flex items-center space-x-4">
+          <div class="h-12 w-12 bg-gray-200 rounded-full"></div>
+          <div class="flex-1 space-y-2">
+            <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+            <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+          </div>
+          <div class="h-6 w-6 bg-gray-200 rounded"></div>
+        </div>
       }
     </div>
   } @else {
     <ul class="space-y-3">
       @for (group of groups(); track group.id) {
         <li (click)="navigateToGroup(group.id)"
-            class="p-4 bg-white rounded-lg shadow cursor-pointer hover:bg-gray-50 transition-transform transform hover:-translate-y-1">
-          <p class="font-semibold">{{ group.name }}</p>
-          <p class="text-sm text-gray-500">{{ group.memberIds.length }} membros</p>
+            class="p-4 bg-white rounded-lg shadow-md cursor-pointer 
+                   hover:bg-gray-50 hover:shadow-lg hover:-translate-y-1 
+                   transition-all duration-200 ease-in-out
+                   flex items-center justify-between space-x-4
+                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+          
+          <div class="flex items-center space-x-4">
+            <div class="flex-shrink-0 bg-blue-100 p-3 rounded-full">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users-icon lucide-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></svg>
+            </div>
+            <div>
+              <p class="font-semibold text-gray-800 text-lg">{{ group.name }}</p>
+              <p class="text-sm text-gray-500">{{ group.memberIds.length }} membro(s)</p>
+            </div>
+          </div>
+
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-gray-400">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+          </svg>
         </li>
       } @empty {
-        <div class="text-center py-10 px-4 border-2 border-dashed rounded-lg">
-          <p class="text-gray-500">Você ainda não faz parte de nenhum grupo.</p>
-          <p class="text-sm text-gray-400 mt-1">Clique no '+' para criar seu primeiro grupo!</p>
+        <div class="text-center py-16 px-4 bg-white border-2 border-dashed rounded-lg shadow-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-gray-400 mx-auto mb-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-2.12 0l-1.125 1.125a1.5 1.5 0 0 0 0 2.12l2.12 2.12a1.5 1.5 0 0 0 2.12 0l1.125-1.125a1.5 1.5 0 0 0 0-2.12ZM11.25 11.25l2.12-2.12a1.5 1.5 0 0 1 2.12 0l1.125 1.125a1.5 1.5 0 0 1 0 2.12l-2.12 2.12a1.5 1.5 0 0 1-2.12 0l-1.125-1.125a1.5 1.5 0 0 1 0-2.12Z" />
+          </svg>
+          <p class="text-lg font-semibold text-gray-600">Você ainda não tem grupos</p>
+          <p class="text-gray-500 mt-1">Clique no botão '+' para criar seu primeiro grupo!</p>
         </div>
       }
     </ul>
   }
 </div>
 
+<button (click)="openAddModal()" 
+        aria-label="Adicionar novo grupo"
+        class="fixed bottom-6 right-6 bg-blue-500 hover:bg-blue-600 text-white 
+               rounded-full w-14 h-14 flex items-center justify-center 
+               shadow-lg text-3xl z-30 transition-transform hover:scale-105">
+  +
+</button>
+
 @if (adding()) {
   <div (click)="closeAddModal()" 
-       class="fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center">
+       class="fixed inset-0 bg-black bg-opacity-60 z-40 flex items-center justify-center p-4">
     
     <div (click)="$event.stopPropagation()" 
-         class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md relative">
+         class="bg-white p-6 rounded-xl shadow-xl w-full max-w-md relative animate-fade-in">
       
-      <button (click)="closeAddModal()" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+      <button (click)="closeAddModal()" 
+              class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+        </svg>
+      </button>
       
-      <h3 class="text-xl font-bold mb-4">Novo Grupo</h3>
+      <h3 class="text-2xl font-bold mb-6 text-gray-800">Criar Novo Grupo</h3>
 
       <form [formGroup]="addForm" (ngSubmit)="onSubmit()">
-        <label for="name" class="block text-gray-700 text-sm font-bold mb-2">Nome do Grupo</label>
-        <input type="text" id="name" formControlName="name" placeholder="Ex: Contas do AP"
-               class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <div class="mb-4">
+          <label for="name" class="block text-sm font-bold mb-2 text-gray-700">Nome do Grupo</label>
+          <input type="text" id="name" formControlName="name" placeholder="Ex: Contas do AP"
+                 class="shadow-sm appearance-none border border-gray-300 rounded w-full py-3 px-3 
+                        text-gray-700 leading-tight 
+                        focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
         
         @if (addForm.get('name')?.invalid && addForm.get('name')?.touched) {
-          <div class="text-red-500 text-xs italic mt-1">
+          <div class="text-red-500 text-sm -mt-2 mb-4">
             O nome do grupo é obrigatório (mín. 3 caracteres).
           </div>
         }
 
-        <button type="submit" [disabled]="addForm.invalid || addLoading()"
-                class="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full disabled:bg-gray-400">
-          @if (!addLoading()) { Criar Grupo } @else { Criando... }
-        </button>
+        <div class="mt-6 space-y-3">
+          <button type="submit" [disabled]="addForm.invalid || addLoading()"
+                  class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg 
+                         disabled:bg-gray-400 transition duration-200">
+            @if (!addLoading()) { 
+              Criar Grupo 
+            } @else { 
+              <span class="animate-pulse">Criando...</span> 
+            }
+          </button>
+          <button type="button" (click)="closeAddModal()" 
+                  class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-lg 
+                         transition duration-200">
+            Cancelar
+          </button>
+        </div>
       </form>
-
     </div>
   </div>
 }
-
-
-<button (click)="openAddModal()" 
-        aria-label="Adicionar novo grupo"
-        class="pb-2 fixed bottom-6 right-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg text-3xl font-bold z-30">
-  +
-</button>

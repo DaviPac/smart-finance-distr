@@ -1,57 +1,111 @@
-<div class="p-4">
+<div class="p-4 md:p-8 bg-gray-50 min-h-screen">
   @if (loading()) {
-    <p>Carregando detalhes do grupo...</p>
+    <p class="text-center text-gray-500">Carregando detalhes do grupo...</p>
   } @else {
     @if (group(); as groupData) {
-      <div class="flex justify-between items-center">
-        <h2 class="text-3xl font-bold mb-2">{{ groupData.name }}</h2>
-        <button (click)="openAddExpenseModal()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+        <div>
+          <h2 class="text-4xl font-bold text-gray-800">{{ groupData.name }}</h2>
+          <p class="text-gray-500 mt-1">ID: {{ groupData.id }}</p>
+          <p class="text-gray-500 mt-1">Membros: {{ groupData.memberIds.length }}</p>
+        </div>
+        <button (click)="openAddExpenseModal()" class="mt-4 md:mt-0 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow transition duration-200">
           Adicionar Gasto
         </button>
       </div>
-      <p class="text-gray-500 mb-6">Membros: {{ groupData.memberIds.length }}</p>
 
       <div class="mt-8">
-        <h3 class="text-2xl font-semibold mb-4">Gastos</h3>
-        <h3 class="text-xl font-semibold mb-4">Gastos totais: {{ getAllExpenses() }}</h3>
-        <div class="bg-white p-4 rounded-lg shadow">
+        <h3 class="text-2xl font-semibold mb-4 text-gray-700">Análise de Gastos</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          
+          <div class="bg-blue-100 border border-blue-200 p-6 rounded-lg shadow-md">
+            <p class="text-sm font-medium text-blue-700">Gasto Total</p>
+            <p class="text-3xl font-bold text-blue-900 mt-1">{{ getAllExpenses() | currency:'BRL' }}</p>
+          </div>
+
+          <div class="bg-yellow-100 border border-yellow-200 p-6 rounded-lg shadow-md">
+            <p class="text-sm font-medium text-yellow-700">Média por Gasto</p>
+            <p class="text-3xl font-bold text-yellow-900 mt-1">{{ (getAllExpenses() / (groupData.expenses?.length || 1)) | currency:'BRL' }}</p>
+            <p class="text-xs text-yellow-600">{{ groupData.expenses?.length }} gasto(s)</p>
+          </div>
+
+          <div class="bg-purple-100 border border-purple-200 p-6 rounded-lg shadow-md">
+            <p class="text-sm font-medium text-purple-700">Valor Ideal por Membro</p>
+            <p class="text-3xl font-bold text-purple-900 mt-1">{{ (getAllExpenses() / (groupData.memberIds.length || 1)) | currency:'BRL' }}</p>
+             <p class="text-xs text-purple-600">{{ groupData.memberIds.length }} membro(s)</p>
+          </div>
+          
+        </div>
+      </div>
+
+      <div class="mt-10">
+        <h3 class="text-2xl font-semibold mb-4 text-gray-700">Histórico de Gastos</h3>
+        <div class="bg-white p-4 rounded-lg shadow-lg">
           <ul class="divide-y divide-gray-200">
             @for (expense of groupData.expenses; track expense.id) {
-              <li class="py-3 flex justify-between items-center">
-                <div>
-                  <p class="font-semibold">{{ expense.description }}</p>
-                  <p class="text-sm text-gray-500">Pago por: {{ getUserData(expense.payerId)?.name }}</p>
+              <li class="py-4 flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                  <div class="flex-shrink-0 bg-gray-100 p-2 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-gray-500">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125V6.375c0-.621-.504-1.125-1.125-1.125H3.375Z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="font-semibold text-gray-800">{{ expense.description }}</p>
+                    <p class="text-sm text-gray-500">Pago por: {{ getUserData(expense.payerId)?.name || 'Usuário desconhecido' }}</p>
+                  </div>
                 </div>
-                <p class="font-bold text-lg">{{ expense.value | currency:'BRL' }}</p>
+                <p class="font-bold text-lg text-green-600">{{ expense.value | currency:'BRL' }}</p>
               </li>
             } @empty {
-              <p class="text-center text-gray-500 py-4">Nenhum gasto registrado neste grupo ainda.</p>
+              <p class="text-center text-gray-500 py-6">Nenhum gasto registrado neste grupo ainda.</p>
             }
           </ul>
         </div>
       </div>
     } @else {
-      }
+      <p class="text-center text-red-500">Grupo não encontrado.</p>
+    }
   }
 </div>
 
-
 @if (addingExpense()) {
-  <div (click)="closeAddExpenseModal()" class="fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center">
-    <div (click)="$event.stopPropagation()" class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md relative">
-      <h3 class="text-xl font-bold mb-4">Adicionar Novo Gasto</h3>
+  <div (click)="closeAddExpenseModal()" class="fixed inset-0 bg-black bg-opacity-60 z-40 flex items-center justify-center p-4">
+    
+    <div (click)="$event.stopPropagation()" class="bg-white p-6 rounded-xl shadow-xl w-full max-w-md relative animate-fade-in">
+      <h3 class="text-2xl font-bold mb-6 text-gray-800">Adicionar Novo Gasto</h3>
+      
       <form [formGroup]="expenseForm" (ngSubmit)="onSubmitExpense()">
         <div class="mb-4">
-          <label for="description" class="block text-sm font-bold mb-2">Descrição</label>
-          <input type="text" id="description" formControlName="description" class="shadow border rounded w-full py-2 px-3">
+          <label for="description" class="block text-sm font-bold mb-2 text-gray-700">Descrição</label>
+          <input type="text" id="description" formControlName="description" 
+                 class="shadow-sm border border-gray-300 rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 placeholder="Ex: Jantar, Supermercado">
         </div>
-        <div class="mb-4">
-          <label for="amount" class="block text-sm font-bold mb-2">Valor (R$)</label>
-          <input type="number" id="amount" formControlName="amount" class="shadow border rounded w-full py-2 px-3">
+        
+        <div class="mb-6">
+          <label for="amount" class="block text-sm font-bold mb-2 text-gray-700">Valor (R$)</label>
+          <input type="number" id="amount" formControlName="amount" 
+                 class="shadow-sm border border-gray-300 rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 placeholder="0,00">
         </div>
-        <button type="submit" [disabled]="expenseForm.invalid || addExpenseLoading()" class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-400">
-          @if (!addExpenseLoading()) { Salvar Gasto } @else { Salvando... }
-        </button>
+        
+        <div class="space-y-3">
+          <button type="submit" [disabled]="expenseForm.invalid || addExpenseLoading()" 
+                  class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg disabled:bg-gray-400 transition duration-200">
+            @if (!addExpenseLoading()) { 
+              Salvar Gasto 
+            } @else { 
+              <span class="animate-pulse">Salvando...</span> 
+            }
+          </button>
+
+          <button type="button" (click)="closeAddExpenseModal()" 
+                  class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-lg transition duration-200">
+            Cancelar
+          </button>
+        </div>
+        
       </form>
     </div>
   </div>
