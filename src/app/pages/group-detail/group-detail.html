@@ -1,0 +1,58 @@
+<div class="p-4">
+  @if (loading()) {
+    <p>Carregando detalhes do grupo...</p>
+  } @else {
+    @if (group(); as groupData) {
+      <div class="flex justify-between items-center">
+        <h2 class="text-3xl font-bold mb-2">{{ groupData.name }}</h2>
+        <button (click)="openAddExpenseModal()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg">
+          Adicionar Gasto
+        </button>
+      </div>
+      <p class="text-gray-500 mb-6">Membros: {{ groupData.memberIds.length }}</p>
+
+      <div class="mt-8">
+        <h3 class="text-2xl font-semibold mb-4">Gastos</h3>
+        <h3 class="text-xl font-semibold mb-4">Gastos totais: {{ getAllExpenses() }}</h3>
+        <div class="bg-white p-4 rounded-lg shadow">
+          <ul class="divide-y divide-gray-200">
+            @for (expense of groupData.expenses; track expense.id) {
+              <li class="py-3 flex justify-between items-center">
+                <div>
+                  <p class="font-semibold">{{ expense.description }}</p>
+                  <p class="text-sm text-gray-500">Pago por: {{ getUserData(expense.payerId)?.name }}</p>
+                </div>
+                <p class="font-bold text-lg">{{ expense.value | currency:'BRL' }}</p>
+              </li>
+            } @empty {
+              <p class="text-center text-gray-500 py-4">Nenhum gasto registrado neste grupo ainda.</p>
+            }
+          </ul>
+        </div>
+      </div>
+    } @else {
+      }
+  }
+</div>
+
+
+@if (addingExpense()) {
+  <div (click)="closeAddExpenseModal()" class="fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center">
+    <div (click)="$event.stopPropagation()" class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md relative">
+      <h3 class="text-xl font-bold mb-4">Adicionar Novo Gasto</h3>
+      <form [formGroup]="expenseForm" (ngSubmit)="onSubmitExpense()">
+        <div class="mb-4">
+          <label for="description" class="block text-sm font-bold mb-2">Descrição</label>
+          <input type="text" id="description" formControlName="description" class="shadow border rounded w-full py-2 px-3">
+        </div>
+        <div class="mb-4">
+          <label for="amount" class="block text-sm font-bold mb-2">Valor (R$)</label>
+          <input type="number" id="amount" formControlName="amount" class="shadow border rounded w-full py-2 px-3">
+        </div>
+        <button type="submit" [disabled]="expenseForm.invalid || addExpenseLoading()" class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-400">
+          @if (!addExpenseLoading()) { Salvar Gasto } @else { Salvando... }
+        </button>
+      </form>
+    </div>
+  </div>
+}
