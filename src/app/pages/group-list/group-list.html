@@ -1,0 +1,67 @@
+<div class="p-4">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-2xl font-bold">Meus Grupos</h2>
+  </div>
+  
+  @if (loading()) {
+    <div class="space-y-3 animate-pulse">
+      @for (_ of [1, 2, 3]; track $index) {
+        <div class="p-4 bg-gray-200 rounded-lg shadow h-16"></div>
+      }
+    </div>
+  } @else {
+    <ul class="space-y-3">
+      @for (group of groups(); track group.id) {
+        <li (click)="navigateToGroup(group.id)"
+            class="p-4 bg-white rounded-lg shadow cursor-pointer hover:bg-gray-50 transition-transform transform hover:-translate-y-1">
+          <p class="font-semibold">{{ group.name }}</p>
+          <p class="text-sm text-gray-500">{{ group.memberIds.length }} membros</p>
+        </li>
+      } @empty {
+        <div class="text-center py-10 px-4 border-2 border-dashed rounded-lg">
+          <p class="text-gray-500">Você ainda não faz parte de nenhum grupo.</p>
+          <p class="text-sm text-gray-400 mt-1">Clique no '+' para criar seu primeiro grupo!</p>
+        </div>
+      }
+    </ul>
+  }
+</div>
+
+@if (adding()) {
+  <div (click)="closeAddModal()" 
+       class="fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center">
+    
+    <div (click)="$event.stopPropagation()" 
+         class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md relative">
+      
+      <button (click)="closeAddModal()" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+      
+      <h3 class="text-xl font-bold mb-4">Novo Grupo</h3>
+
+      <form [formGroup]="addForm" (ngSubmit)="onSubmit()">
+        <label for="name" class="block text-gray-700 text-sm font-bold mb-2">Nome do Grupo</label>
+        <input type="text" id="name" formControlName="name" placeholder="Ex: Contas do AP"
+               class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500">
+        
+        @if (addForm.get('name')?.invalid && addForm.get('name')?.touched) {
+          <div class="text-red-500 text-xs italic mt-1">
+            O nome do grupo é obrigatório (mín. 3 caracteres).
+          </div>
+        }
+
+        <button type="submit" [disabled]="addForm.invalid || addLoading()"
+                class="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full disabled:bg-gray-400">
+          @if (!addLoading()) { Criar Grupo } @else { Criando... }
+        </button>
+      </form>
+
+    </div>
+  </div>
+}
+
+
+<button (click)="openAddModal()" 
+        aria-label="Adicionar novo grupo"
+        class="pb-2 fixed bottom-6 right-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg text-3xl font-bold z-30">
+  +
+</button>
