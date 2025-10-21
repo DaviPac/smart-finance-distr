@@ -6,6 +6,7 @@ import { User } from '../../models/user.model';
 import { Database } from '@angular/fire/database';
 import { child, get, ref, set } from 'firebase/database';
 import runInContext from '../../decorators/run-in-context-decorator';
+import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -16,6 +17,8 @@ export class AuthService {
   readonly currentFirebaseUser = toSignal(authState(this.auth));
   currentUser = signal<User | null>(null);
 
+  public readonly user$: Observable<FirebaseUser | null> = authState(this.auth);
+  
   injector = inject(Injector);
 
   isAuthenticated() {
