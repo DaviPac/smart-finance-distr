@@ -200,11 +200,29 @@ export class GroupsService {
 
       this._groups.update(groups => {
         if (!groups) return [];
-        return groups.map(group =>
-          group.id === data.groupId
-            ? { ...group, expenses: [...(group.expenses || []), newExpense] }
-            : group
-        );
+        
+        return groups.map(group => {
+          // Encontra o grupo correto
+          if (group.id === data.groupId) {
+            
+            // --- CORREÇÃO AQUI ---
+
+            // 1. Converte o objeto 'expenses' atual em um array.
+            //    Usa '|| {}' para garantir que funcione se group.expenses for null/undefined.
+            const expensesArray = Object.values(group.expenses || {});
+
+            // 2. Cria o novo array de despesas, espalhando o array antigo e adicionando a nova.
+            const updatedExpensesArray = [...expensesArray, newExpense];
+
+            // 3. Retorna o grupo atualizado.
+            //    'expenses' agora é um array, o que deve satisfazer seu tipo 'Group'.
+            return { ...group, expenses: updatedExpensesArray };
+            
+          } else {
+            // Retorna os outros grupos sem modificação
+            return group;
+          }
+        });
       });
 
       return newExpense;
