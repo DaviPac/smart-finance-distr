@@ -20,8 +20,8 @@ export class Navbar {
     this.isMobileMenuOpen.update(value => !value);
   }
   
-  navigate(route: string) {
-    this.router.navigate([route]);
+  async navigate(route: string) {
+    await this.router.navigate([route]);
     this.isMobileMenuOpen.set(false);
   }
 
