@@ -43,67 +43,100 @@ export class GroupDetail implements OnInit {
     customCategory: [''],
   });
 
+  private toCents(value: number): number {
+    return Math.round(value * 100);
+  }
+
+  totalSpendInCents = computed(() => {
+    const expenses = this.group()?.expenses || [];
+    // Soma todos os gastos já convertidos para centavos
+    return expenses.reduce((sum, expense) => sum + this.toCents(expense.value), 0);
+  });
+
   memberBalances = computed(() => {
     const groupData = this.group();
-    if (!groupData || !groupData.memberIds.length) {
+    const totalGroupSpendInCents = this.totalSpendInCents(); // Usa o novo computed
+
+    if (!groupData || !groupData.memberIds.length || totalGroupSpendInCents === 0) {
       return { balances: [], creditors: [], debtors: [], currentUserBalance: null };
     }
 
-    const totalGroupSpend = this.getAllExpenses();
     const memberCount = groupData.memberIds.length;
-    const averageSpendPerMember = totalGroupSpend / memberCount;
 
-    // 1. Calcula quanto cada um gastou
+    // 2. Calcula a cota base e o "resto" (centavos indivisíveis)
+    const baseShareInCents = Math.floor(totalGroupSpendInCents / memberCount);
+    let remainderCents = totalGroupSpendInCents % memberCount;
+
+    // 3. Calcula quanto cada um gastou em CENTAVOS
     const totalSpentByMember = new Map<string, number>();
-    groupData.memberIds.forEach(id => totalSpentByMember.set(id, 0)); // Inicializa todos com 0
+    groupData.memberIds.forEach(id => totalSpentByMember.set(id, 0));
 
     groupData.expenses?.forEach(expense => {
       const currentSpend = totalSpentByMember.get(expense.payerId) || 0;
-      totalSpentByMember.set(expense.payerId, currentSpend + expense.value);
+      totalSpentByMember.set(expense.payerId, currentSpend + this.toCents(expense.value));
     });
 
-    // 2. Calcula o balanço (gasto - média)
-    const balances = groupData.memberIds.map(userId => {
+    // 4. Calcula balanços finais, distribuindo o resto
+    // Ordenamos os IDs para que a distribuição do resto seja sempre consistente
+    const sortedMemberIds = [...groupData.memberIds].sort();
+
+    const balancesInCents = sortedMemberIds.map(userId => {
       const totalSpent = totalSpentByMember.get(userId) || 0;
-      const balance = totalSpent - averageSpendPerMember;
+
+      // Distribui o resto: os primeiros 'remainderCents' membros na lista pagam 1 centavo a mais
+      let memberShare = baseShareInCents;
+      if (remainderCents > 0) {
+        memberShare += 1;
+        remainderCents -= 1;
+      }
+
+      const balance = totalSpent - memberShare;
       return {
         userId,
         name: this.getUserData(userId)?.name || 'Usuário desconhecido',
-        balance: balance
+        balanceInCents: balance // Mantemos em centavos
       };
     });
 
-    // 3. Separa credores (quem recebe) e devedores (quem paga)
+    // 5. Converte de volta para Reais (float) APENAS PARA EXIBIÇÃO
+    const balances = balancesInCents.map(b => ({
+      ...b,
+      balance: b.balanceInCents / 100.0 // Converte para float
+    }));
+
     const creditors = balances.filter(b => b.balance > 0).sort((a, b) => b.balance - a.balance);
     const debtors = balances.filter(b => b.balance < 0).sort((a, b) => a.balance - b.balance);
-    
-    // 4. Encontra o balanço do usuário logado
+
     const currentUserId = this.authService.currentUser()?.uid;
     const currentUserBalance = balances.find(b => b.userId === currentUserId) || null;
 
     return { balances, creditors, debtors, currentUserBalance };
   });
 
+  /**
+   * Agrega os gastos totais por categoria USANDO CENTAVOS.
+   */
   categorySpending = computed(() => {
     const expenses = this.group()?.expenses || [];
-    const totalSpend = this.getAllExpenses();
-    
-    if (totalSpend === 0) return [];
+    const totalSpendCents = this.totalSpendInCents(); // Usa o novo computed
+
+    if (totalSpendCents === 0) return [];
 
     const categoryMap = new Map<string, number>();
     expenses.forEach(expense => {
       const category = expense.category || 'sem categoria';
-      const currentTotal = categoryMap.get(category) || 0;
-      categoryMap.set(category, currentTotal + expense.value);
+      const currentTotalCents = categoryMap.get(category) || 0;
+      // Soma em centavos
+      categoryMap.set(category, currentTotalCents + this.toCents(expense.value));
     });
 
-    const spendingArray = Array.from(categoryMap.entries()).map(([category, total]) => ({
+    const spendingArray = Array.from(categoryMap.entries()).map(([category, totalCents]) => ({
       category,
-      total,
-      percentage: (total / totalSpend) * 100
+      total: totalCents / 100.0, // Converte para float para exibição
+      percentage: (totalCents / totalSpendCents) * 100
     }));
 
-    return spendingArray.sort((a, b) => b.total - a.total); // Ordena do maior para o menor
+    return spendingArray.sort((a, b) => b.total - a.total);
   });
 
   async ngOnInit() {
@@ -153,9 +186,7 @@ export class GroupDetail implements OnInit {
   }
 
   getAllExpenses(): number {
-    let expenses = 0;
-    this.group()?.expenses?.forEach(ex => expenses += ex.value);
-    return expenses;
+    return this.totalSpendInCents() / 100.0;
   }
 
   // --- Modal Control ---
