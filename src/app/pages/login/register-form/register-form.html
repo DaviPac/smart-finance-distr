@@ -1,17 +1,59 @@
 <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
   <div class="mb-4">
-    <label for="name" class="block text-gray-700 text-sm font-bold mb-2">Nome</label>
-    <input type="text" id="name" formControlName="name" class="shadow appearance-none border rounded w-full py-2 px-3 ...">
+    <label
+      for="name"
+      class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2"
+      >Nome</label
+    >
+    <input
+      type="text"
+      id="name"
+      formControlName="name"
+      class="shadow appearance-none border border-gray-300 rounded w-full py-2 px-3 
+             text-gray-700 leading-tight focus:outline-none focus:shadow-outline
+             dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white
+             dark:focus:ring-blue-500 dark:focus:border-blue-500"
+    />
   </div>
   <div class="mb-4">
-    <label for="reg-email" class="block text-gray-700 text-sm font-bold mb-2">Email</label>
-    <input type="email" id="reg-email" formControlName="email" class="shadow appearance-none border rounded w-full py-2 px-3 ...">
+    <label
+      for="reg-email"
+      class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2"
+      >Email</label
+    >
+    <input
+      type="email"
+      id="reg-email"
+      formControlName="email"
+      class="shadow appearance-none border border-gray-300 rounded w-full py-2 px-3 
+             text-gray-700 leading-tight focus:outline-none focus:shadow-outline
+             dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white
+             dark:focus:ring-blue-500 dark:focus:border-blue-500"
+    />
   </div>
   <div class="mb-6">
-    <label for="reg-password" class="block text-gray-700 text-sm font-bold mb-2">Senha</label>
-    <input type="password" id="reg-password" formControlName="password" class="shadow appearance-none border rounded w-full py-2 px-3 ...">
+    <label
+      for="reg-password"
+      class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2"
+      >Senha</label
+    >
+    <input
+      type="password"
+      id="reg-password"
+      formControlName="password"
+      class="shadow appearance-none border border-gray-300 rounded w-full py-2 px-3 
+             text-gray-700 leading-tight focus:outline-none focus:shadow-outline
+             dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white
+             dark:focus:ring-blue-500 dark:focus:border-blue-500"
+    />
   </div>
-  <button type="submit" [disabled]="isLoading || registerForm.invalid" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full disabled:opacity-50">
+  <button
+    type="submit"
+    [disabled]="isLoading || registerForm.invalid"
+    class="bg-blue-500 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 
+           text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full 
+           disabled:opacity-50 dark:disabled:opacity-60"
+  >
     @if (!isLoading) { Criar Conta } @else { Criando... }
   </button>
 </form>
