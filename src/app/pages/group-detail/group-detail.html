@@ -1,213 +1,330 @@
-<div class="p-4 md:p-8 bg-gray-50 min-h-screen">
+<div class="p-4 md:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
   @if (loading()) {
-    <p class="text-center text-gray-500">Carregando detalhes do grupo...</p>
-  } @else {
-    @if (group(); as groupData) {
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-        <div>
-          <h2 class="text-4xl font-bold text-gray-800">{{ groupData.name }}</h2>
-          <p class="text-gray-500 mt-1">Membros: {{ groupData.memberIds.length }}</p>
-        </div>
-        <button (click)="openAddExpenseModal()" class="mt-4 md:mt-0 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow transition duration-200">
-          Adicionar Gasto
-        </button>
+  <p class="text-center text-gray-500 dark:text-gray-400">
+    Carregando detalhes do grupo...
+  </p>
+  } @else { @if (group(); as groupData) {
+  <div
+    class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6"
+  >
+    <div>
+      <h2 class="text-4xl font-bold text-gray-800 dark:text-gray-100">
+        {{ groupData.name }}
+      </h2>
+      <p class="text-gray-500 dark:text-gray-400 mt-1">
+        Membros: {{ groupData.memberIds.length }}
+      </p>
+    </div>
+    <button
+      (click)="openAddExpenseModal()"
+      class="mt-4 md:mt-0 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow transition duration-200"
+    >
+      Adicionar Gasto
+    </button>
+  </div>
+
+  <div class="mt-8">
+    <h3 class="text-2xl font-semibold mb-4 text-gray-700 dark:text-gray-200">
+      Resumo Financeiro
+    </h3>
+
+    <div
+      class="bg-blue-100 dark:bg-gray-800 border border-blue-200 dark:border-blue-700 p-6 rounded-lg shadow-md mb-8"
+    >
+      <p class="text-sm font-medium text-blue-700 dark:text-blue-400">
+        Gasto Total do Grupo
+      </p>
+      <p class="text-3xl font-bold text-blue-900 dark:text-blue-200 mt-1">
+        {{ getAllExpenses() | currency:'BRL' }}
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+        <h4 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-100">
+          Seu Balanço
+        </h4>
+        @if (memberBalances().currentUserBalance; as myBalance) { @if
+        (myBalance.balance < 0) {
+        <p class="text-lg text-gray-600 dark:text-gray-300">Você deve:</p>
+        <p class="text-4xl font-bold text-red-500 dark:text-red-400 mb-4">
+          {{ -myBalance.balance | currency:'BRL' }}
+        </p>
+        <h5 class="font-semibold text-gray-700 dark:text-gray-200 mb-2">
+          Pague para (sugestões):
+        </h5>
+        <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+          @for (creditor of memberBalances().creditors; track creditor.userId) {
+          @if(creditor.userId !== myBalance.userId) {
+          <li class="py-2 flex justify-between items-center">
+            <span class="text-gray-800 dark:text-gray-100">{{
+              creditor.name
+            }}</span>
+            <span class="font-medium text-green-600 dark:text-green-400"
+              >(recebe {{ creditor.balance | currency:'BRL' }})</span
+            >
+          </li>
+          } }
+        </ul>
+        } @else if (myBalance.balance > 0) {
+        <p class="text-lg text-gray-600 dark:text-gray-300">
+          Você tem a receber:
+        </p>
+        <p class="text-4xl font-bold text-green-600 dark:text-green-400 mb-4">
+          {{ myBalance.balance | currency:'BRL' }}
+        </p>
+        <h5 class="font-semibold text-gray-700 dark:text-gray-200 mb-2">
+          Devedores (quem te deve):
+        </h5>
+        <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+          @for (debtor of memberBalances().debtors; track debtor.userId) {
+          @if(debtor.userId !== myBalance.userId) {
+          <li class="py-2 flex justify-between items-center">
+            <span class="text-gray-800 dark:text-gray-100">{{
+              debtor.name
+            }}</span>
+            <span class="font-medium text-red-600 dark:text-red-500"
+              >(deve {{ -debtor.balance | currency:'BRL' }})</span
+            >
+          </li>
+          } }
+        </ul>
+        } @else {
+        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+          Você está quite! 🥳
+        </p>
+        <p class="text-gray-600 dark:text-gray-300 mt-2">
+          Seu balanço é R$ 0,00.
+        </p>
+        } }
       </div>
 
-      <div class="mt-8">
-        <h3 class="text-2xl font-semibold mb-4 text-gray-700">Resumo Financeiro</h3>
-        
-        <div class="bg-blue-100 border border-blue-200 p-6 rounded-lg shadow-md mb-8">
-          <p class="text-sm font-medium text-blue-700">Gasto Total do Grupo</p>
-          <p class="text-3xl font-bold text-blue-900 mt-1">{{ getAllExpenses() | currency:'BRL' }}</p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          
-          <div class="bg-white p-6 rounded-lg shadow-lg">
-            <h4 class="text-xl font-bold mb-4 text-gray-800">Seu Balanço</h4>
-            @if (memberBalances().currentUserBalance; as myBalance) {
-              
-              @if (myBalance.balance < 0) {
-                <p class="text-lg text-gray-600">Você deve:</p>
-                <p class="text-4xl font-bold text-red-500 mb-4">
-                  {{ -myBalance.balance | currency:'BRL' }}
-                </p>
-                <h5 class="font-semibold text-gray-700 mb-2">Pague para (sugestões):</h5>
-                <ul class="divide-y divide-gray-100">
-                  @for (creditor of memberBalances().creditors; track creditor.userId) {
-                    @if(creditor.userId !== myBalance.userId) {
-                      <li class="py-2 flex justify-between items-center">
-                        <span class="text-gray-800">{{ creditor.name }}</span>
-                        <span class="font-medium text-green-600">(recebe {{ creditor.balance | currency:'BRL' }})</span>
-                      </li>
-                    }
-                  }
-                </ul>
-              } 
-              
-              @else if (myBalance.balance > 0) {
-                <p class="text-lg text-gray-600">Você tem a receber:</p>
-                <p class="text-4xl font-bold text-green-600 mb-4">
-                  {{ myBalance.balance | currency:'BRL' }}
-                </p>
-                <h5 class="font-semibold text-gray-700 mb-2">Devedores (quem te deve):</h5>
-                <ul class="divide-y divide-gray-100">
-                  @for (debtor of memberBalances().debtors; track debtor.userId) {
-                    @if(debtor.userId !== myBalance.userId) {
-                      <li class="py-2 flex justify-between items-center">
-                        <span class="text-gray-800">{{ debtor.name }}</span>
-                        <span class="font-medium text-red-600">(deve {{ -debtor.balance | currency:'BRL' }})</span>
-                      </li>
-                    }
-                  }
-                </ul>
-              } 
-              
-              @else {
-                <p class="text-2xl font-bold text-blue-600">
-                  Você está quite! 🥳
-                </p>
-                <p class="text-gray-600 mt-2">Seu balanço é R$ 0,00.</p>
-              }
-            }
+      <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+        <h4 class="text-xl font-bold mb-5 text-gray-800 dark:text-gray-100">
+          Gastos por Categoria
+        </h4>
+        <div class="space-y-4">
+          @for (cat of categorySpending(); track cat.category) {
+          <div>
+            <div class="flex justify-between mb-1">
+              <span
+                class="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize"
+                >{{ cat.category }}</span
+              >
+              <span class="text-sm font-bold text-gray-800 dark:text-gray-100"
+                >{{ cat.total | currency:'BRL' }}</span
+              >
+            </div>
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+              <div
+                class="bg-blue-500 h-3 rounded-full"
+                [style.width.%]="cat.percentage"
+                [title]="
+                  cat.category + ': ' + (cat.percentage | number:'1.0-1') + '%'
+                "
+              ></div>
+            </div>
+            <span class="text-xs text-gray-500 dark:text-gray-400"
+              >{{ cat.percentage | number:'1.0-1' }}% do total</span
+            >
           </div>
-          
-          <div class="bg-white p-6 rounded-lg shadow-lg">
-            <h4 class="text-xl font-bold mb-5 text-gray-800">Gastos por Categoria</h4>
-            <div class="space-y-4">
-              @for (cat of categorySpending(); track cat.category) {
-                <div>
-                  <div class="flex justify-between mb-1">
-                    <span class="text-sm font-medium text-gray-700 capitalize">{{ cat.category }}</span>
-                    <span class="text-sm font-bold text-gray-800">{{ cat.total | currency:'BRL' }}</span>
-                  </div>
-                  <div class="w-full bg-gray-200 rounded-full h-3">
-                    <div class="bg-blue-500 h-3 rounded-full" 
-                         [style.width.%]="cat.percentage"
-                         [title]="cat.category + ': ' + (cat.percentage | number:'1.0-1') + '%'">
-                    </div>
-                  </div>
-                  <span class="text-xs text-gray-500">{{ cat.percentage | number:'1.0-1' }}% do total</span>
-                </div>
-              } @empty {
-                <p class="text-center text-gray-500 py-4">Nenhum gasto categorizado.</p>
-              }
+          } @empty {
+          <p class="text-center text-gray-500 dark:text-gray-400 py-4">
+            Nenhum gasto categorizado.
+          </p>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="mt-10">
+    <h3 class="text-2xl font-semibold mb-4 text-gray-700 dark:text-gray-200">
+      Histórico de Gastos
+    </h3>
+    <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg">
+      <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+        @for (expense of groupData.expenses; track expense.id) {
+        <li class="py-4 flex justify-between items-center">
+          <div class="flex items-center space-x-4">
+            <div
+              class="flex-shrink-0 bg-gray-100 dark:bg-gray-700 p-2 rounded-full"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="w-6 h-6 text-gray-500 dark:text-gray-400"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125V6.375c0-.621-.504-1.125-1.125-1.125H3.375Z"
+                />
+              </svg>
+            </div>
+            <div>
+              <p class="font-semibold text-gray-800 dark:text-gray-100">
+                {{ expense.description }}
+              </p>
+              <div class="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+                <span>Pago por: {{ getUserData(expense.payerId)?.name || '...' }}</span>
+                @if(expense.category) {
+                <span
+                  class="font-mono text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 px-2 py-0.5 rounded-full capitalize"
+                  >{{expense.category}}</span
+                >
+                }
+              </div>
             </div>
           </div>
-
-        </div>
-      </div>
-      <div class="mt-10">
-        <h3 class="text-2xl font-semibold mb-4 text-gray-700">Histórico de Gastos</h3>
-        <div class="bg-white p-4 rounded-lg shadow-lg">
-          <ul class="divide-y divide-gray-200">
-            @for (expense of groupData.expenses; track expense.id) {
-              <li class="py-4 flex justify-between items-center">
-                <div class="flex items-center space-x-4">
-                  <div class="flex-shrink-0 bg-gray-100 p-2 rounded-full">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-gray-500">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125V6.375c0-.621-.504-1.125-1.125-1.125H3.375Z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p class="font-semibold text-gray-800">{{ expense.description }}</p>
-                    <div class="flex items-center space-x-2 text-sm text-gray-500">
-                      <span>Pago por: {{ getUserData(expense.payerId)?.name || '...' }}</span>
-                      @if(expense.category) {
-                        <span class="font-mono text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full capitalize">{{expense.category}}</span>
-                      }
-                    </div>
-                  </div>
-                </div>
-                <p class="font-bold text-lg text-green-600">{{ expense.value | currency:'BRL' }}</p>
-              </li>
-            } @empty {
-              <p class="text-center text-gray-500 py-6">Nenhum gasto registrado neste grupo ainda.</p>
-            }
-          </ul>
-        </div>
-      </div>
-    } @else {
-      <p class="text-center text-red-500">Grupo não encontrado.</p>
-    }
-  }
+          <p class="font-bold text-lg text-green-600 dark:text-green-400">
+            {{ expense.value | currency:'BRL' }}
+          </p>
+        </li>
+        } @empty {
+        <p class="text-center text-gray-500 dark:text-gray-400 py-6">
+          Nenhum gasto registrado neste grupo ainda.
+        </p>
+        }
+      </ul>
+    </div>
+  </div>
+  } @else {
+  <p class="text-center text-red-500 dark:text-red-400">
+    Grupo não encontrado.
+  </p>
+  } }
 </div>
 
 @if (addingExpense()) {
-  <div (click)="closeAddExpenseModal()" class="fixed inset-0 bg-black bg-opacity-60 z-40 flex items-center justify-center p-4">
-    
-    <div (click)="$event.stopPropagation()" class="bg-white p-6 rounded-xl shadow-xl w-full max-w-md relative animate-fade-in">
-      <h3 class="text-2xl font-bold mb-6 text-gray-800">Adicionar Novo Gasto</h3>
-      
-      <form [formGroup]="expenseForm" (ngSubmit)="onSubmitExpense()">
-        
-        <div class="mb-4">
-          <label for="description" class="block text-sm font-bold mb-2 text-gray-700">Descrição</label>
-          <input type="text" id="description" formControlName="description" 
-                 class="shadow-sm border border-gray-300 rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                 placeholder="Ex: Jantar, Supermercado">
-          @if (expenseForm.get('description')?.invalid && expenseForm.get('description')?.touched) {
-            <p class="text-red-500 text-xs mt-1">A descrição é obrigatória.</p>
-          }
-        </div>
-        <div class="mb-4">
-          <label for="amount" class="block text-sm font-bold mb-2 text-gray-700">Valor (R$)</label>
-          <input type="number" id="amount" formControlName="amount" 
-                 class="shadow-sm border border-gray-300 rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                 placeholder="0,00">
-          @if (expenseForm.get('amount')?.invalid && expenseForm.get('amount')?.touched) {
-            <p class="text-red-500 text-xs mt-1">O valor deve ser maior que 0.</p>
-          }
-        </div>
-        
-        <div class="mb-4">
-          <label for="category" class="block text-sm font-bold mb-2 text-gray-700">Categoria</label>
-          <select id="category" formControlName="category"
-                  class="shadow-sm border border-gray-300 rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="" disabled>Selecione uma categoria</option>
-            
-            @for (category of existingCategories(); track category) {
-              <option [value]="category" class="capitalize">{{ category }}</option>
-            }
-            
-            <option value="new">Nova Categoria...</option>
-          </select>
-          @if (expenseForm.get('category')?.invalid && expenseForm.get('category')?.touched) {
-            <p class="text-red-500 text-xs mt-1">Selecione uma categoria.</p>
-          }
-        </div>
+<div
+  (click)="closeAddExpenseModal()"
+  class="fixed inset-0 bg-black bg-opacity-60 dark:bg-opacity-80 z-40 flex items-center justify-center p-4"
+>
+  <div
+    (click)="$event.stopPropagation()"
+    class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-md relative animate-fade-in"
+  >
+    <h3 class="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100">
+      Adicionar Novo Gasto
+    </h3>
 
-        @if (expenseForm.get('category')?.value === 'new') {
-          <div class="mb-6 animate-fade-in">
-            <label for="customCategory" class="block text-sm font-bold mb-2 text-gray-700">Nome da Nova Categoria</label>
-            <input type="text" id="customCategory" formControlName="customCategory"
-                   class="shadow-sm border border-gray-300 rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                   placeholder="Ex: Padaria, Viagem">
-            @if (expenseForm.get('customCategory')?.invalid && expenseForm.get('customCategory')?.touched) {
-                <p class="text-red-500 text-xs mt-1">O nome da nova categoria é obrigatório.</p>
-            }
-          </div>
-        } @else {
-          <div class="mb-6"></div> 
+    <form [formGroup]="expenseForm" (ngSubmit)="onSubmitExpense()">
+      <div class="mb-4">
+        <label
+          for="description"
+          class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300"
+          >Descrição</label
+        >
+        <input
+          type="text"
+          id="description"
+          formControlName="description"
+          class="shadow-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:placeholder-gray-500"
+          placeholder="Ex: Jantar, Supermercado"
+        />
+        @if (expenseForm.get('description')?.invalid &&
+        expenseForm.get('description')?.touched) {
+        <p class="text-red-500 dark:text-red-400 text-xs mt-1">
+          A descrição é obrigatória.
+        </p>
         }
-        
-        <div class="space-y-3">
-          <button type="submit" [disabled]="expenseForm.invalid || addExpenseLoading()" 
-                  class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg disabled:bg-gray-400 transition duration-200">
-            @if (!addExpenseLoading()) { 
-              Salvar Gasto 
-            } @else { 
-              <span class="animate-pulse">Salvando...</span> 
-            }
-          </button>
+      </div>
+      <div class="mb-4">
+        <label
+          for="amount"
+          class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300"
+          >Valor (R$)</label
+        >
+        <input
+          type="number"
+          id="amount"
+          formControlName="amount"
+          class="shadow-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:placeholder-gray-500"
+          placeholder="0,00"
+        />
+        @if (expenseForm.get('amount')?.invalid &&
+        expenseForm.get('amount')?.touched) {
+        <p class="text-red-500 dark:text-red-400 text-xs mt-1">
+          O valor deve ser maior que 0.
+        </p>
+        }
+      </div>
 
-          <button type="button" (click)="closeAddExpenseModal()" 
-                  class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-lg transition duration-200">
-            Cancelar
-          </button>
-        </div>
-        
-      </form>
-    </div>
+      <div class="mb-4">
+        <label
+          for="category"
+          class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300"
+          >Categoria</label
+        >
+        <select
+          id="category"
+          formControlName="category"
+          class="shadow-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="" disabled>Selecione uma categoria</option>
+
+          @for (category of existingCategories(); track category) {
+          <option [value]="category" class="capitalize">{{ category }}</option>
+          }
+
+          <option value="new">Nova Categoria...</option>
+        </select>
+        @if (expenseForm.get('category')?.invalid &&
+        expenseForm.get('category')?.touched) {
+        <p class="text-red-500 dark:text-red-400 text-xs mt-1">
+          Selecione uma categoria.
+        </p>
+        }
+      </div>
+
+      @if (expenseForm.get('category')?.value === 'new') {
+      <div class="mb-6 animate-fade-in">
+        <label
+          for="customCategory"
+          class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300"
+          >Nome da Nova Categoria</label
+        >
+        <input
+          type="text"
+          id="customCategory"
+          formControlName="customCategory"
+          class="shadow-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:placeholder-gray-500"
+          placeholder="Ex: Padaria, Viagem"
+        />
+        @if (expenseForm.get('customCategory')?.invalid &&
+        expenseForm.get('customCategory')?.touched) {
+        <p class="text-red-500 dark:text-red-400 text-xs mt-1">
+          O nome da nova categoria é obrigatório.
+        </p>
+        }
+      </div>
+      } @else {
+      <div class="mb-6"></div>
+      }
+
+      <div class="space-y-3">
+        <button
+          type="submit"
+          [disabled]="expenseForm.invalid || addExpenseLoading()"
+          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg disabled:bg-gray-400 dark:disabled:bg-gray-600 transition duration-200"
+        >
+          @if (!addExpenseLoading()) { Salvar Gasto } @else {
+          <span class="animate-pulse">Salvando...</span>
+          }
+        </button>
+
+        <button
+          type="button"
+          (click)="closeAddExpenseModal()"
+          class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 font-medium py-3 px-4 rounded-lg transition duration-200"
+        >
+          Cancelar
+        </button>
+      </div>
+    </form>
   </div>
+</div>
 }

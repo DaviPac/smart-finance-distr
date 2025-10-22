@@ -16,7 +16,7 @@ export class GroupListComponent implements OnInit {
   private authService = inject(AuthService);
   private fb = inject(NonNullableFormBuilder);
   private router = inject(Router);
-
+  obj = Object;
   // Signals para controlar o estado da UI
   loading = this.groupsService.loading;
   adding = signal<boolean>(false);
