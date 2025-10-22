@@ -46,7 +46,7 @@ export class Login {
       const user = await action;
 
       if (user) {
-        this.router.navigate(['/groups']);
+        this.router.navigate(['/']);
       } else {
         this.authFailed.set(true);
       }
