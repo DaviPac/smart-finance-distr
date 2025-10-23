@@ -8,11 +8,12 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { Expense } from '../../models/expense.model';
 import { User } from '../../models/user.model';
 import { UsersService } from '../../Services/user/user';
+import { CategoryPieChartComponent } from '../../components/pie-chart/pie-chart';
 
 @Component({
   selector: 'app-group-detail',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, CategoryPieChartComponent],
   templateUrl: './group-detail.html',
 })
 export class GroupDetail implements OnInit {
@@ -139,6 +140,20 @@ export class GroupDetail implements OnInit {
     return spendingArray.sort((a, b) => b.total - a.total);
   });
 
+  chartDataBreakdown = computed(() => {
+    const spending = this.categorySpending(); // Seu signal existente
+
+    if (!spending || spending.length === 0) {
+      return { labels: [], data: [] };
+    }
+
+    // Transforma o array de objetos em dois arrays separados
+    const labels = spending.map(s => s.category);
+    const data = spending.map(s => s.total); // Usa o valor 'total' em R$
+
+    return { labels, data };
+  });
+
   async ngOnInit() {
     this.loading.set(true);
     const groupId = this.route.snapshot.paramMap.get('groupId');
@@ -245,5 +260,24 @@ export class GroupDetail implements OnInit {
     });
     this.addExpenseLoading.set(false);
     this.closeAddExpenseModal();
+  }
+
+  async deleteExpense(expenseId: string) {
+    const currentGroupId = this.group()?.id;
+    if (!currentGroupId) {
+      console.error("ID do grupo não disponível para deletar gasto.");
+      return;
+    }
+    await this.groupsService.deleteExpense(currentGroupId, expenseId);
+    this.group.update(g => {
+      if (g) {
+        g.expenses = g.expenses?.filter(exp => exp.id !== expenseId) || [];
+      }
+      return g;
+    });
+  }
+
+  getUserId(): string | null {
+    return this.authService.currentUser()?.uid || null;
   }
 }

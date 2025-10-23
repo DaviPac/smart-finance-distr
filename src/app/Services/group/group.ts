@@ -1,10 +1,9 @@
 import { effect, inject, Injectable, Injector, signal } from '@angular/core';
-import { Database, get, ref, set, push } from '@angular/fire/database';
+import { Database, get, ref, update, set, push } from '@angular/fire/database';
 import { Group } from '../../models/group.model';
 import { Expense } from '../../models/expense.model';
 import { AuthService } from '../auth/auth';
 import runInContext from '../../decorators/run-in-context-decorator';
-import { update } from 'firebase/database';
 
 @Injectable({
   providedIn: 'root'
@@ -196,7 +195,7 @@ export class GroupsService {
     };
 
     try {
-      await set(newExpenseRef, newExpense);
+      await set(newExpenseRef, {...newExpense, date: newExpense.date.getTime() });
 
       this._groups.update(groups => {
         if (!groups) return [];
@@ -232,6 +231,47 @@ export class GroupsService {
     }
   }
 
+  @runInContext()
+  async deleteExpense(groupId: string, expenseId: string): Promise<void> {
+    if (!groupId || !expenseId) {
+      console.error('GroupId e ExpenseId são necessários.');
+      throw new Error('GroupId e ExpenseId são necessários para deletar a despesa.');
+    }
+
+    // 1. Criar a referência para o dado no Firebase
+    const expenseRef = ref(this.db, `groups/${groupId}/expenses/${expenseId}`);
+
+    try {
+      // 2. Deletar o dado no Firebase (setando como null)
+      await set(expenseRef, null);
+
+      // 3. Atualizar o estado local (o signal)
+      this._groups.update((groups: any) => {
+        if (!groups) return null; // Retorna null se o estado já for null
+
+        return groups.map((group: any) => {
+          // Se não for o grupo que estamos modificando, retorne-o como está
+          if (group.id !== groupId) {
+            return group;
+          }
+
+          // Se for o grupo correto, filtre o array de despesas
+          // (Assumindo que group.expenses é um array, com base no seu método createExpense)
+          const updatedExpenses = { ...(group.expenses || {}) } as { [key: string]: Expense };
+
+          delete updatedExpenses[expenseId];
+
+          // Retorna o grupo atualizado com o array de despesas modificado
+          return { ...group, expenses: updatedExpenses };
+        });
+      });
+
+    } catch (error) {
+      console.error(`Erro ao deletar a despesa ${expenseId} do grupo ${groupId}:`, error);
+      throw error; // Re-lança o erro para o componente que chamou poder tratar
+    }
+  }
+
   getGroupById(id: string): Group | undefined {
     return this.groups()?.find(g => g.id === id);
   }
@@ -244,7 +284,12 @@ export class GroupsService {
       const groupSnapshot = await get(groupRef);
 
       if (groupSnapshot.exists()) {
-        return { id: groupId, ...groupSnapshot.val() } as Group;
+        const currGroup = { id: groupId, date: new Date(groupSnapshot.val().date), ...groupSnapshot.val() } as Group;
+        const expensesObj = currGroup.expenses as { [key: string]: Expense } | undefined;
+        Object.keys(expensesObj || {}).forEach(key => {
+          if (expensesObj) expensesObj[key].date = new Date(expensesObj[key].date);
+        });
+        return currGroup;
       }
       return null;
     } catch (error) {

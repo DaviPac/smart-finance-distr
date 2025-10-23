@@ -99,41 +99,11 @@
         } }
       </div>
 
-      <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+      <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg flex justify-center items-center flex-col">
         <h4 class="text-xl font-bold mb-5 text-gray-800 dark:text-gray-100">
           Gastos por Categoria
         </h4>
-        <div class="space-y-4">
-          @for (cat of categorySpending(); track cat.category) {
-          <div>
-            <div class="flex justify-between mb-1">
-              <span
-                class="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize"
-                >{{ cat.category }}</span
-              >
-              <span class="text-sm font-bold text-gray-800 dark:text-gray-100"
-                >{{ cat.total | currency:'BRL' }}</span
-              >
-            </div>
-            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-              <div
-                class="bg-blue-500 h-3 rounded-full"
-                [style.width.%]="cat.percentage"
-                [title]="
-                  cat.category + ': ' + (cat.percentage | number:'1.0-1') + '%'
-                "
-              ></div>
-            </div>
-            <span class="text-xs text-gray-500 dark:text-gray-400"
-              >{{ cat.percentage | number:'1.0-1' }}% do total</span
-            >
-          </div>
-          } @empty {
-          <p class="text-center text-gray-500 dark:text-gray-400 py-4">
-            Nenhum gasto categorizado.
-          </p>
-          }
-        </div>
+        <app-category-pie-chart [breakdown]="chartDataBreakdown()"/>
       </div>
     </div>
   </div>
@@ -182,6 +152,7 @@
           <p class="font-bold text-lg text-green-600 dark:text-green-400">
             {{ expense.value | currency:'BRL' }}
           </p>
+          @if (expense.payerId === getUserId()) { <button class="text-white bg-red-800" (click)="deleteExpense(expense.id)">Excluir</button> }
         </li>
         } @empty {
         <p class="text-center text-gray-500 dark:text-gray-400 py-6">
