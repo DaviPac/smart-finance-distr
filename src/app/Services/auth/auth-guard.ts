@@ -12,11 +12,16 @@ export const authGuard: CanActivateFn = async (_route, _state) => {
   const authenticatedUser = await firstValueFrom(authService.user$);
 
   if (authenticatedUser) {
-    const userData = await usersService.getUserById(authenticatedUser.uid)
-    if (!userData) {
+    const userDataStr = localStorage.getItem('userData');
+    if (!userDataStr) {
+      return router.parseUrl('/login');
+    }
+    const userData = JSON.parse(userDataStr);
+    if (!userData || !userData.uid || userData.uid !== authenticatedUser.uid) {
       return router.parseUrl('/login');
     }
     authService.currentUser.set(userData);
+    authService.updateCurrentUser(authenticatedUser.uid);
     return true;
   }
 

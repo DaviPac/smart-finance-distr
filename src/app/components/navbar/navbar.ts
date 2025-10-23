@@ -30,4 +30,12 @@ export class Navbar {
     this.router.navigate(['/login']);
   }
 
+  nome(): string | undefined {
+    return this.authService.currentUser()?.name;
+  }
+
+  email(): string | undefined {
+    return this.authService.currentUser()?.email;
+  }
+
 }
