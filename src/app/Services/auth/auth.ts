@@ -34,6 +34,7 @@ export class AuthService {
     try {
       const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
       await this.updateCurrentUser(userCredential.user.uid);
+      localStorage.setItem('userData', JSON.stringify(this.currentUser()));
       return this.currentUser();
     } catch (error) {
       console.error("Erro no login:", error);
@@ -68,12 +69,13 @@ export class AuthService {
   // Logout
   @runInContext()
   async logout(): Promise<void> {
+    localStorage.removeItem('userData');
     this.currentUser.set(null);
     await signOut(this.auth);
     this.router.navigate(['/login']);
   }
 
-  private async updateCurrentUser(uid: string): Promise<void> {
+  async updateCurrentUser(uid: string): Promise<void> {
     if (!uid) {
       this.currentUser.set(null);
       return;
