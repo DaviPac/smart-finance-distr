@@ -6,11 +6,12 @@ import { Group } from '../../models/group.model';
 import { GroupsService } from '../../Services/group/group';
 import { AuthService } from '../../Services/auth/auth';
 import { UsersService } from '../../Services/user/user';
+import { CategoryPieChartComponent } from '../../components/pie-chart/pie-chart';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterModule], 
+  imports: [CommonModule, RouterModule, CategoryPieChartComponent], 
   templateUrl: './home.html'
 })
 export class Home {
@@ -35,15 +36,10 @@ export class Home {
     this.groups = this.groupService.groups;
 
     effect(() => {
-      const user = this.currentUser();
-      
+      const user = this.currentUser();   
       if (user && user.uid) {
-        // Se temos um usuário, mandamos o serviço buscar os grupos dele.
         this.groupService.loadUserGroups();
       }
-      // Não é preciso um 'else' para limpar os grupos,
-      // pois seu GroupsService já faz isso automaticamente 
-      // no 'effect' do construtor dele.
     });
 
     effect(async () => {
@@ -152,6 +148,24 @@ export class Home {
       })
       .sort((a, b) => b.lastActivityTime - a.lastActivityTime) 
       .slice(0, 3);
+  });
+
+  categoryBreakdown = computed(() => {
+    const expenses = this.allExpenses();
+    if (!expenses) return { labels: [], data: [] };
+
+    const totals = new Map<string, number>();
+
+    for (const exp of expenses) {
+      const cat = exp.category || 'Sem categoria';
+      const val = Number(exp.value) || 0;
+      totals.set(cat, (totals.get(cat) || 0) + val);
+    }
+
+    const labels = Array.from(totals.keys());
+    const data = Array.from(totals.values());
+
+    return { labels, data };
   });
 
   openAddExpenseModal() {

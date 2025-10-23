@@ -167,6 +167,17 @@
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg flex flex-col justify-center items-center">
+
+      <div class="flex items-center gap-3 mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-gray-700 dark:text-gray-300"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+          <h3 class="text-2xl font-semibold text-gray-700 dark:text-gray-200">
+              Resumo
+          </h3>
+      </div>
+
+      <app-category-pie-chart [breakdown]="categoryBreakdown()"></app-category-pie-chart>
+    </div>
     <div
       class="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg"
     >
@@ -218,6 +229,7 @@
               </svg>
             </div>
             <div>
+              <p class="text-gray-500 dark:text-gray-400">{{ expense?.date?.toLocaleDateString() }}</p>
               <p class="font-semibold text-gray-800 dark:text-gray-100">
                 {{ expense?.description }}
               </p>
