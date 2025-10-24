@@ -7,11 +7,12 @@ import { GroupsService } from '../../Services/group/group';
 import { AuthService } from '../../Services/auth/auth';
 import { UsersService } from '../../Services/user/user';
 import { CategoryPieChartComponent } from '../../components/pie-chart/pie-chart';
+import { ReactiveFormsModule, NonNullableFormBuilder, Validators } from '@angular/forms';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterModule, CategoryPieChartComponent], 
+  imports: [CommonModule, RouterModule, CategoryPieChartComponent, ReactiveFormsModule], 
   templateUrl: './home.html'
 })
 export class Home {
@@ -21,6 +22,8 @@ export class Home {
   groups: Signal<Group[] | null>;
   currentUser: Signal<User | null>;
   isJoiningGroup = signal(false);
+  addingExpense = signal(false);
+  addExpenseLoading = signal(false);
   
   private allUsers = signal<User[]>([]);
 
@@ -28,6 +31,16 @@ export class Home {
   private authService = inject(AuthService);
   private usersService = inject(UsersService);
   private router = inject(Router);
+
+  // Form de adicionar gasto
+  private fb = inject(NonNullableFormBuilder);
+
+  addExpenseForm = this.fb.group({
+    description: ['', [Validators.required]],
+    value: [0, [Validators.required]],
+    category: ['', [Validators.required]],
+    groupId: ['', [Validators.required]]
+  });
 
   constructor() {
     // --- LIGAÇÃO DOS SINAIS ---
@@ -87,7 +100,6 @@ export class Home {
       const numMembers = group.memberIds ? Object.keys(group.memberIds).length : 0;
       
       if (numMembers === 0) {
-        console.log("0 MEMBROS")
         continue;
       }
 
@@ -169,7 +181,7 @@ export class Home {
   });
 
   openAddExpenseModal() {
-    console.log("Abrir modal de adicionar gasto...");
+    this.addingExpense.set(true);
   }
 
   async promptToJoinGroup() {
@@ -204,5 +216,30 @@ export class Home {
 
   navigateToGroupsList() {
     this.router.navigate(['/groups']);
+  }
+
+  onSubmitAddExpense() {
+    if (this.addExpenseForm.valid) {
+      this.addExpenseLoading.set(true);
+      const expenseData = this.addExpenseForm.getRawValue();
+      this.groupService.createExpense({
+        description: expenseData.description,
+        value: expenseData.value,
+        category: expenseData.category,
+        groupId: expenseData.groupId
+      }).then(() => {
+        this.addExpenseLoading.set(false);
+        this.closeAddExpenseModal();
+      }).catch(error => {
+        console.error("Erro ao adicionar despesa:", error);
+        alert('Ocorreu um erro ao adicionar a despesa. Tente novamente.');
+        this.addExpenseLoading.set(false);
+      });
+    }
+  }
+
+  closeAddExpenseModal() {
+    this.addingExpense.set(false);
+    this.addExpenseForm.reset();
   }
 }

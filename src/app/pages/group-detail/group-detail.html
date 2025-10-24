@@ -21,6 +21,12 @@
     >
       Adicionar Gasto
     </button>
+    <button
+      (click)="openAddPaymentModal()"
+      class="mt-4 md:mt-0 ml-4 bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg shadow transition duration-200"
+    >
+      Adicionar Pagamento
+    </button>
   </div>
 
   <div class="mt-8">
@@ -160,6 +166,55 @@
         </p>
         }
       </ul>
+      <div class="mt-10">
+        <h3 class="text-2xl font-semibold mb-4 text-gray-700 dark:text-gray-200">
+          Histórico de Pagamentos
+        </h3>
+        <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+          @for (payment of getAllPayments(); track payment.id) {
+          <li class="py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+              <div
+                class="flex-shrink-0 bg-gray-100 dark:bg-gray-700 p-2 rounded-full"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="w-6 h-6 text-gray-500 dark:text-gray-400"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <div>
+                <p class="font-semibold text-gray-800 dark:text-gray-100">
+                  Pagamento para {{
+                    getUserData(payment.targetId)?.name || 'Membro Desconhecido'
+                  }}
+                </p>
+                <div class="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+                  <span>Pago por: {{ getUserData(payment.payerId)?.name || '...' }}</span>
+                  <span>{{ payment.date | date:'shortDate' }}</span>
+                </div>
+              </div>
+            </div>
+            <p class="font-bold text-lg text-purple-600 dark:text-purple-400">
+              {{ payment.value | currency:'BRL' }}
+            </p>
+          </li>
+          } @empty {
+          <p class="text-center text-gray-500 dark:text-gray-400 py-6">
+            Nenhum pagamento registrado neste grupo ainda.
+          </p>
+          }
+        </ul>
+      </div>
     </div>
   </div>
   } @else {
@@ -328,6 +383,86 @@
           Cancelar
         </button>
       </div>
+    </div>
+  </div>
+}
+
+@if (addingPayment()) {
+  <div
+    (click)="closeAddPaymentModal()"
+    class="fixed inset-0 bg-black bg-opacity-60 dark:bg-opacity-80 z-40 flex items-center justify-center p-4"
+  >
+    <div
+      (click)="$event.stopPropagation()"
+      class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-md relative animate-fade-in"
+    >
+      <h3 class="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100">
+        Adicionar Novo Pagamento
+      </h3>
+
+      <form [formGroup]="paymentForm" (ngSubmit)="onSubmitPayment()">
+        <label
+          for="value"
+          class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300"
+          >Valor do Pagamento (R$)</label
+        >
+        <input
+          type="number"
+          id="value"
+          formControlName="value"
+          class="shadow-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:placeholder-gray-500 mb-4"
+          placeholder="0,00"
+        />
+        @if (paymentForm.get('value')?.invalid &&
+        paymentForm.get('value')?.touched) {
+        <p class="text-red-500 dark:text-red-400 text-xs mb-4">
+          O valor do pagamento deve ser maior que 0.
+        </p>
+        }
+        <label
+          for="targetId"
+          class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300"
+          >Membro que Receberá o Pagamento</label
+        >
+        <select
+          id="targetId"
+          formControlName="targetId"
+          class="shadow-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-6"
+        >
+          <option value="" disabled>Selecione um membro</option>
+          @for (member of group()!.memberIds; track member) {
+          @if (member !== getUserId()) {
+          <option [value]="member">{{
+            getUserData(member)?.name || 'Membro Desconhecido'
+          }}</option>
+          } }
+        </select>
+        @if (paymentForm.get('targetMember')?.invalid &&
+        paymentForm.get('targetMember')?.touched) {
+        <p class="text-red-500 dark:text-red-400 text-xs mb-6">
+          Selecione um membro para o pagamento.
+        </p>
+        }
+        <div class="space-y-3">
+          <button
+            type="submit"
+            [disabled]="paymentForm.invalid || addPaymentLoading()"
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg disabled:bg-gray-400 dark:disabled:bg-gray-600 transition duration-200"
+          >
+            @if (!addPaymentLoading()) { Salvar Pagamento } @else {
+            <span class="animate-pulse">Salvando...</span>
+            }
+          </button>
+
+          <button
+            type="button"
+            (click)="closeAddPaymentModal()"
+            class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 font-medium py-3 px-4 rounded-lg transition duration-200"
+          >
+            Cancelar
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 }

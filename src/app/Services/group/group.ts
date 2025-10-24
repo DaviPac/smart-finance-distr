@@ -3,6 +3,7 @@ import { Database, get, ref, update, set, push } from '@angular/fire/database';
 import { Group } from '../../models/group.model';
 import { Expense } from '../../models/expense.model';
 import { AuthService } from '../auth/auth';
+import { Payment } from '../../models/payment.model';
 import runInContext from '../../decorators/run-in-context-decorator';
 
 @Injectable({
@@ -241,6 +242,46 @@ export class GroupsService {
 
     } catch (error) {
       console.error(`Erro ao deletar a despesa ${expenseId} do grupo ${groupId}:`, error);
+      throw error;
+    }
+  }
+
+  async createPayment(data: Omit<Payment, 'id' | 'date' | 'payerId'>): Promise<Payment> {
+    const payerId = this.authService.currentUser()?.uid;
+    if (!payerId) {
+      throw new Error('Nenhum usuário autenticado para criar um pagamento.');
+    }
+    if (!data.groupId) {
+      throw new Error('O groupId é necessário para criar um pagamento.');
+    }
+    const newPaymentRef = push(ref(this.db, `groups/${data.groupId}/payments`));
+    const newPaymentId = newPaymentRef.key;
+    if (!newPaymentId) {
+      throw new Error('Falha ao gerar um ID único para o pagamento.');
+    }
+    const newPayment: Payment = {
+      id: newPaymentId,
+      ...data,
+      payerId: payerId,
+      date: new Date().toISOString()
+    };
+    try {
+      await set(newPaymentRef, newPayment);
+      this._groups.update(groups => {
+        if (!groups) return [];
+        return groups.map(group => {
+          if (group.id === data.groupId) {
+            const paymentsArray = Object.values(group.payments || {});
+            const updatedPaymentsArray = [...paymentsArray, newPayment];
+            return { ...group, payments: updatedPaymentsArray };
+          } else {
+            return group;
+          }
+        });
+      });
+      return newPayment;
+    } catch (error) {
+      console.error(`Erro ao criar pagamento no grupo ${data.groupId}:`, error);
       throw error;
     }
   }

@@ -9,6 +9,7 @@ import { User } from '../../models/user.model';
 import { UsersService } from '../../Services/user/user';
 import { CategoryPieChartComponent } from '../../components/pie-chart/pie-chart';
 import { MatIconModule } from '@angular/material/icon';
+import { Payment } from '../../models/payment.model';
 
 @Component({
   selector: 'app-group-detail',
@@ -33,6 +34,8 @@ export class GroupDetail implements OnInit {
   addExpenseLoading = signal<boolean>(false);
   deletingExpense = signal<boolean>(false);
   deletingExpenseId = signal<string | null>(null);
+  addingPayment = signal<boolean>(false);
+  addPaymentLoading = signal<boolean>(false);
 
   // --- Definição do Formulário ---
   expenseForm = this.fb.group({
@@ -40,6 +43,11 @@ export class GroupDetail implements OnInit {
     amount: [0, [Validators.required, Validators.min(0.01)]],
     category: ['', [Validators.required]],
     customCategory: [''],
+  });
+
+  paymentForm = this.fb.group({
+    value: [0, [Validators.required, Validators.min(0.01)]],
+    targetId: ['', [Validators.required]],
   });
 
   // --- Valores Computados (Computed) ---
@@ -87,7 +95,15 @@ export class GroupDetail implements OnInit {
         remainderCents -= 1;
       }
 
-      const balance = totalSpent - memberShare;
+      let balance = totalSpent - memberShare;
+      // Leva em consideração group.payments
+      if (groupData.payments) Object.values(groupData.payments).forEach((payment: Payment) => {
+        if (payment.payerId === userId) {
+          balance += this.toCents(payment.value);
+        } else if (payment.targetId === userId) {
+          balance -= this.toCents(payment.value);
+        }
+      });
       return {
         userId,
         name: this.getUserData(userId)?.name || 'Usuário desconhecido',
@@ -195,6 +211,51 @@ export class GroupDetail implements OnInit {
       });
     }
   }
+
+  openAddPaymentModal(): void {
+    this.paymentForm.reset({
+      value: 0,
+      targetId: ''
+    });
+    this.addingPayment.set(true);
+  }
+
+  closeAddPaymentModal(): void {
+    this.addingPayment.set(false);
+  }
+
+  async onSubmitPayment() {
+    if (this.paymentForm.invalid) {
+      this.paymentForm.markAllAsTouched();
+      return;
+    }
+    this.addPaymentLoading.set(true);
+    const formValue = this.paymentForm.getRawValue();
+    const currentGroupId = this.group()?.id;
+    const currentUserId = this.authService.currentUser()?.uid;
+
+    if (!currentGroupId || !currentUserId) {
+      console.error("Faltam dados para criar o pagamento.");
+      this.addPaymentLoading.set(false);
+      return;
+    }
+    const newPayment = await this.groupsService.createPayment({
+      groupId: currentGroupId,
+      value: formValue.value,
+      targetId: formValue.targetId
+    });
+    this.group.update(g => {
+      if (!g) return g;
+      return {
+        ...g,
+        payments: [...(g.payments || []), newPayment]
+      };
+    });
+    this.addPaymentLoading.set(false);
+    this.closeAddPaymentModal();
+  }
+
+  getAllPayments = () => this.group()?.payments?.length ? this.group()!.payments! : this.group()?.payments ? Object.values(this.group()!.payments!) : [] ;
 
   expenseName(expenseId: string): string {
     const expense = this.group()?.expenses?.find(exp => exp.id === expenseId);
