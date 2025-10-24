@@ -10,22 +10,18 @@ import runInContext from '../../decorators/run-in-context-decorator';
 })
 export class GroupsService {
 
-  //- Injeção de Dependências
   private db: Database = inject(Database);
   private authService: AuthService = inject(AuthService);
   injector = inject(Injector);
 
-  //- Gerenciamento de Estado
   private readonly _groups = signal<Group[] | null>(null);
   public readonly groups = this._groups.asReadonly();
   public readonly loading = signal<boolean>(false);
   public currentGroup = signal<Group | null>(null);
 
   constructor() {
-    // Efeito que reage às mudanças no estado de autenticação
     effect(() => {
       if (!this.authService.currentUser()) {
-        console.log('Usuário deslogou. Resetando o estado de GroupsService.');
         this.reset();
       }
     });
@@ -35,7 +31,6 @@ export class GroupsService {
     this._groups.set(null);
   }
 
-  //- Métodos Públicos
   @runInContext()
   async loadUserGroups(): Promise<void> {
     const user = this.authService.currentUser();
@@ -124,7 +119,6 @@ export class GroupsService {
     const groupRef = ref(this.db, `groups/${groupId}`);
 
     try {
-      // 1. Verificar se o grupo existe
       const groupSnapshot = await get(groupRef);
       if (!groupSnapshot.exists()) {
         throw new Error('Grupo não encontrado.');
@@ -132,10 +126,9 @@ export class GroupsService {
 
       const groupDataFromDb = groupSnapshot.val();
 
-      // 2. Verificar se o usuário já é membro (usando a estrutura de objeto)
       if (groupDataFromDb.memberIds && groupDataFromDb.memberIds[userId]) {
         console.warn('Usuário já é membro deste grupo.');
-        // Se já for membro, apenas retorne os dados locais (convertendo memberIds para array)
+
         return {
           id: groupId,
           ...groupDataFromDb,
@@ -143,24 +136,20 @@ export class GroupsService {
         };
       }
 
-      // 3. Preparar a atualização atômica para as duas localizações no DB
       const updates: { [key: string]: any } = {};
-      updates[`groups/${groupId}/memberIds/${userId}`] = true; // Adiciona usuário ao grupo
-      updates[`user_groups/${userId}/${groupId}`] = true;      // Adiciona grupo ao usuário
+      updates[`groups/${groupId}/memberIds/${userId}`] = true;
+      updates[`user_groups/${userId}/${groupId}`] = true;
 
       await update(ref(this.db), updates);
 
-      // 4. Preparar o objeto local para o sinal
-      // (Seguindo seu padrão de `createGroup`, convertemos o objeto memberIds em um array)
       const updatedMemberIds = groupDataFromDb.memberIds ? [...Object.keys(groupDataFromDb.memberIds), userId] : [userId];
 
       const joinedGroup: Group = {
         id: groupId,
         ...groupDataFromDb,
-        memberIds: updatedMemberIds // Armazena como array localmente
+        memberIds: updatedMemberIds
       };
 
-      // 5. Atualizar o sinal local para incluir este novo grupo
       this._groups.update(currentGroups => [...(currentGroups || []), joinedGroup]);
       
       return joinedGroup;
@@ -201,24 +190,15 @@ export class GroupsService {
         if (!groups) return [];
         
         return groups.map(group => {
-          // Encontra o grupo correto
           if (group.id === data.groupId) {
             
-            // --- CORREÇÃO AQUI ---
-
-            // 1. Converte o objeto 'expenses' atual em um array.
-            //    Usa '|| {}' para garantir que funcione se group.expenses for null/undefined.
             const expensesArray = Object.values(group.expenses || {});
 
-            // 2. Cria o novo array de despesas, espalhando o array antigo e adicionando a nova.
             const updatedExpensesArray = [...expensesArray, newExpense];
 
-            // 3. Retorna o grupo atualizado.
-            //    'expenses' agora é um array, o que deve satisfazer seu tipo 'Group'.
             return { ...group, expenses: updatedExpensesArray };
             
           } else {
-            // Retorna os outros grupos sem modificação
             return group;
           }
         });
@@ -238,37 +218,30 @@ export class GroupsService {
       throw new Error('GroupId e ExpenseId são necessários para deletar a despesa.');
     }
 
-    // 1. Criar a referência para o dado no Firebase
     const expenseRef = ref(this.db, `groups/${groupId}/expenses/${expenseId}`);
 
     try {
-      // 2. Deletar o dado no Firebase (setando como null)
       await set(expenseRef, null);
 
-      // 3. Atualizar o estado local (o signal)
       this._groups.update((groups: any) => {
-        if (!groups) return null; // Retorna null se o estado já for null
+        if (!groups) return null;
 
         return groups.map((group: any) => {
-          // Se não for o grupo que estamos modificando, retorne-o como está
           if (group.id !== groupId) {
             return group;
           }
 
-          // Se for o grupo correto, filtre o array de despesas
-          // (Assumindo que group.expenses é um array, com base no seu método createExpense)
           const updatedExpenses = { ...(group.expenses || {}) } as { [key: string]: Expense };
 
           delete updatedExpenses[expenseId];
 
-          // Retorna o grupo atualizado com o array de despesas modificado
           return { ...group, expenses: updatedExpenses };
         });
       });
 
     } catch (error) {
       console.error(`Erro ao deletar a despesa ${expenseId} do grupo ${groupId}:`, error);
-      throw error; // Re-lança o erro para o componente que chamou poder tratar
+      throw error;
     }
   }
 
@@ -281,7 +254,6 @@ export class GroupsService {
     return this.groups()?.find(g => g.id === id);
   }
 
-  //- Métodos Privados
   @runInContext()
   private async _getGroupDetails(groupId: string): Promise<Group | null> {
     try {
