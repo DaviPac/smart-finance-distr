@@ -246,6 +246,7 @@ export class GroupsService {
     }
   }
 
+  @runInContext()
   async createPayment(data: Omit<Payment, 'id' | 'date' | 'payerId'>): Promise<Payment> {
     const payerId = this.authService.currentUser()?.uid;
     if (!payerId) {
