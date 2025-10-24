@@ -239,6 +239,7 @@ export class GroupDetail implements OnInit {
         expenses: [...(g.expenses || []), newExpense]
       };
     });
+    this.addExpenseLoading.set(false);
     this.closeAddExpenseModal();
   }
 
