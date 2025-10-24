@@ -248,7 +248,7 @@ export class GroupDetail implements OnInit {
       if (!g) return g;
       return {
         ...g,
-        payments: [...(g.payments || []), newPayment]
+        payments: [...(g.payments ? (g.payments.length ? g.payments : Object.values(g.payments)) : []), newPayment]
       };
     });
     this.addPaymentLoading.set(false);
