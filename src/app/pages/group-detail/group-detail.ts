@@ -5,38 +5,36 @@ import { GroupsService } from '../../Services/group/group';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../Services/auth/auth';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Expense } from '../../models/expense.model';
 import { User } from '../../models/user.model';
 import { UsersService } from '../../Services/user/user';
 import { CategoryPieChartComponent } from '../../components/pie-chart/pie-chart';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-group-detail',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, CategoryPieChartComponent],
+  imports: [CommonModule, ReactiveFormsModule, CategoryPieChartComponent, MatIconModule],
   templateUrl: './group-detail.html',
 })
 export class GroupDetail implements OnInit {
+  // --- Injeções de Dependência ---
   private route = inject(ActivatedRoute);
   private groupsService = inject(GroupsService);
   private authService = inject(AuthService);
   private usersService = inject(UsersService);
   private fb = inject(NonNullableFormBuilder);
 
+  // --- Estado (Sinais e Cache) ---
   private usersCache = new Map<string, User | null>();
 
   group = signal<Group | undefined>(undefined);
-  expenses = signal<Expense[]>([]);
   loading = signal<boolean>(true);
   addingExpense = signal<boolean>(false);
   addExpenseLoading = signal<boolean>(false);
+  deletingExpense = signal<boolean>(false);
+  deletingExpenseId = signal<string | null>(null);
 
-  existingCategories = computed(() => {
-    const expenses = this.group()?.expenses || [];
-    const categories = expenses.map(ex => ex.category.toLowerCase());
-    return [...new Set(categories.filter(c => c))];
-  });
-
+  // --- Definição do Formulário ---
   expenseForm = this.fb.group({
     description: ['', [Validators.required]],
     amount: [0, [Validators.required, Validators.min(0.01)]],
@@ -44,9 +42,12 @@ export class GroupDetail implements OnInit {
     customCategory: [''],
   });
 
-  private toCents(value: number): number {
-    return Math.round(value * 100);
-  }
+  // --- Valores Computados (Computed) ---
+  existingCategories = computed(() => {
+    const expenses = this.group()?.expenses || [];
+    const categories = expenses.map(ex => ex.category.toLowerCase());
+    return [...new Set(categories.filter(c => c))];
+  });
 
   totalSpendInCents = computed(() => {
     const expenses = this.group()?.expenses || [];
@@ -56,19 +57,17 @@ export class GroupDetail implements OnInit {
 
   memberBalances = computed(() => {
     const groupData = this.group();
-    const totalGroupSpendInCents = this.totalSpendInCents(); // Usa o novo computed
+    const totalGroupSpendInCents = this.totalSpendInCents();
 
     if (!groupData || !groupData.memberIds.length || totalGroupSpendInCents === 0) {
       return { balances: [], creditors: [], debtors: [], currentUserBalance: null };
     }
 
     const memberCount = groupData.memberIds.length;
-
-    // 2. Calcula a cota base e o "resto" (centavos indivisíveis)
     const baseShareInCents = Math.floor(totalGroupSpendInCents / memberCount);
     let remainderCents = totalGroupSpendInCents % memberCount;
 
-    // 3. Calcula quanto cada um gastou em CENTAVOS
+    // Calcula quanto cada um gastou em CENTAVOS
     const totalSpentByMember = new Map<string, number>();
     groupData.memberIds.forEach(id => totalSpentByMember.set(id, 0));
 
@@ -77,14 +76,11 @@ export class GroupDetail implements OnInit {
       totalSpentByMember.set(expense.payerId, currentSpend + this.toCents(expense.value));
     });
 
-    // 4. Calcula balanços finais, distribuindo o resto
-    // Ordenamos os IDs para que a distribuição do resto seja sempre consistente
+    // Calcula balanços finais, distribuindo o resto
     const sortedMemberIds = [...groupData.memberIds].sort();
-
     const balancesInCents = sortedMemberIds.map(userId => {
       const totalSpent = totalSpentByMember.get(userId) || 0;
 
-      // Distribui o resto: os primeiros 'remainderCents' membros na lista pagam 1 centavo a mais
       let memberShare = baseShareInCents;
       if (remainderCents > 0) {
         memberShare += 1;
@@ -95,14 +91,14 @@ export class GroupDetail implements OnInit {
       return {
         userId,
         name: this.getUserData(userId)?.name || 'Usuário desconhecido',
-        balanceInCents: balance // Mantemos em centavos
+        balanceInCents: balance
       };
     });
 
-    // 5. Converte de volta para Reais (float) APENAS PARA EXIBIÇÃO
+    // Converte de volta para Reais (float) APENAS PARA EXIBIÇÃO
     const balances = balancesInCents.map(b => ({
       ...b,
-      balance: b.balanceInCents / 100.0 // Converte para float
+      balance: b.balanceInCents / 100.0
     }));
 
     const creditors = balances.filter(b => b.balance > 0).sort((a, b) => b.balance - a.balance);
@@ -114,12 +110,9 @@ export class GroupDetail implements OnInit {
     return { balances, creditors, debtors, currentUserBalance };
   });
 
-  /**
-   * Agrega os gastos totais por categoria USANDO CENTAVOS.
-   */
   categorySpending = computed(() => {
     const expenses = this.group()?.expenses || [];
-    const totalSpendCents = this.totalSpendInCents(); // Usa o novo computed
+    const totalSpendCents = this.totalSpendInCents();
 
     if (totalSpendCents === 0) return [];
 
@@ -127,13 +120,12 @@ export class GroupDetail implements OnInit {
     expenses.forEach(expense => {
       const category = expense.category || 'sem categoria';
       const currentTotalCents = categoryMap.get(category) || 0;
-      // Soma em centavos
       categoryMap.set(category, currentTotalCents + this.toCents(expense.value));
     });
 
     const spendingArray = Array.from(categoryMap.entries()).map(([category, totalCents]) => ({
       category,
-      total: totalCents / 100.0, // Converte para float para exibição
+      total: totalCents / 100.0,
       percentage: (totalCents / totalSpendCents) * 100
     }));
 
@@ -141,19 +133,16 @@ export class GroupDetail implements OnInit {
   });
 
   chartDataBreakdown = computed(() => {
-    const spending = this.categorySpending(); // Seu signal existente
-
+    const spending = this.categorySpending();
     if (!spending || spending.length === 0) {
       return { labels: [], data: [] };
     }
-
-    // Transforma o array de objetos em dois arrays separados
     const labels = spending.map(s => s.category);
-    const data = spending.map(s => s.total); // Usa o valor 'total' em R$
-
+    const data = spending.map(s => s.total);
     return { labels, data };
   });
 
+  // --- Lifecycle Hook ---
   async ngOnInit() {
     this.loading.set(true);
     const groupId = this.route.snapshot.paramMap.get('groupId');
@@ -164,47 +153,16 @@ export class GroupDetail implements OnInit {
       return;
     }
 
-    const groupFromService = this.groupsService.getGroupById(groupId);
-
-    if (groupFromService) {
-      const processedGroup: Group = {
-        ...groupFromService,
-        memberIds: Object.keys(groupFromService.memberIds),
-        expenses: groupFromService.expenses ? Object.values(groupFromService.expenses) : []
-      };
-      
-      const userFetchPromises = processedGroup.memberIds.map(async (id) => {
-        const user = await this.usersService.getUserById(id);
-        this.usersCache.set(id, user);
-      });
-      
-      await Promise.all(userFetchPromises);
-
-      this.group.set(processedGroup);
-
-    } else {
-      console.log('Grupo não encontrado!');
-    }
-    
+    await this.loadGroupData(groupId);
+    this.setupExpenseFormListeners();
     this.loading.set(false);
-
-    this.expenseForm.get('category')?.valueChanges.subscribe(value => {
-      const customCategoryControl = this.expenseForm.get('customCategory');
-      if (value === 'new') {
-        customCategoryControl?.setValidators([Validators.required]);
-      } else {
-        customCategoryControl?.clearValidators();
-      }
-      customCategoryControl?.updateValueAndValidity();
-    });
-
   }
 
+  // --- Métodos Públicos (Usados no Template) ---
   getAllExpenses(): number {
     return this.totalSpendInCents() / 100.0;
   }
 
-  // --- Modal Control ---
   openAddExpenseModal(): void {
     this.expenseForm.reset({
       description: '',
@@ -219,46 +177,68 @@ export class GroupDetail implements OnInit {
     this.addingExpense.set(false);
   }
 
+  openDeleteExpenseModal(expenseId: string): void {
+    this.deletingExpenseId.set(expenseId);
+    this.deletingExpense.set(true);
+  }
+
+  closeDeleteExpenseModal(): void {
+    this.deletingExpenseId.set(null);
+    this.deletingExpense.set(false);
+  }
+
+  confirmDeleteExpense(): void {
+    const expenseId = this.deletingExpenseId();
+    if (expenseId) {
+      this.deleteExpense(expenseId).then(() => {
+        this.closeDeleteExpenseModal();
+      });
+    }
+  }
+
+  expenseName(expenseId: string): string {
+    const expense = this.group()?.expenses?.find(exp => exp.id === expenseId);
+    return expense ? expense.description : 'Gasto desconhecido';
+  }
+
   getUserData(userId: string): User | null | undefined {
     return this.usersCache.get(userId);
   }
 
-  // --- Form Submission ---
   async onSubmitExpense() {
-    // NOVO: Marcar campos como "tocados" para exibir erros
     if (this.expenseForm.invalid) {
-        this.expenseForm.markAllAsTouched();
-        return;
+      this.expenseForm.markAllAsTouched();
+      return;
     }
     
     this.addExpenseLoading.set(true);
     const formValue = this.expenseForm.getRawValue();
     const currentGroupId = this.group()?.id;
-    const currentUserId = this.authService.currentUser()?.email;
 
-    if (!currentGroupId || !currentUserId) {
-      console.error("Faltam dados do grupo ou do usuário para criar o gasto.");
+    if (!currentGroupId) {
+      console.error("Faltam dados do grupo para criar o gasto.");
       this.addExpenseLoading.set(false);
       return;
     }
 
-    // NOVO: Determinar a categoria final
     const finalCategory = (formValue.category === 'new' 
       ? formValue.customCategory 
-      : formValue.category).toLowerCase(); // Padroniza para minúsculas
+      : formValue.category).toLowerCase();
 
     const newExpense = await this.groupsService.createExpense({
       groupId: currentGroupId,
       description: formValue.description,
       value: formValue.amount,
-      category: finalCategory // NOVO: Usar a categoria final
+      category: finalCategory
     });
     
     this.group.update(g => {
-      g?.expenses?.push(newExpense);
-      return g;
+      if (!g) return g;
+      return {
+        ...g,
+        expenses: [...(g.expenses || []), newExpense]
+      };
     });
-    this.addExpenseLoading.set(false);
     this.closeAddExpenseModal();
   }
 
@@ -270,14 +250,58 @@ export class GroupDetail implements OnInit {
     }
     await this.groupsService.deleteExpense(currentGroupId, expenseId);
     this.group.update(g => {
-      if (g) {
-        g.expenses = g.expenses?.filter(exp => exp.id !== expenseId) || [];
-      }
-      return g;
+      if (!g) return g;
+      return {
+        ...g,
+        expenses: g.expenses?.filter(exp => exp.id !== expenseId) || []
+      };
     });
   }
 
   getUserId(): string | null {
     return this.authService.currentUser()?.uid || null;
   }
+
+  // --- Métodos Privados (Lógica Interna) ---
+  private async loadGroupData(groupId: string) {
+
+    const groupFromService = await this.groupsService.getGroupByIdAsync(groupId);
+
+    if (groupFromService) {
+      const processedGroup: Group = {
+        ...groupFromService,
+        memberIds: Object.keys(groupFromService.memberIds),
+        expenses: groupFromService.expenses ? Object.values(groupFromService.expenses) : []
+      };
+      
+      const userFetchPromises = processedGroup.memberIds.map(async (id) => {
+        const user = await this.usersService.getUserById(id);
+        this.usersCache.set(id, user);
+      });
+      
+      await Promise.all(userFetchPromises);
+      this.group.set(processedGroup);
+
+    } else {
+      console.log('Grupo não encontrado!');
+    }
+  }
+
+  private setupExpenseFormListeners(): void {
+    this.expenseForm.get('category')?.valueChanges.subscribe(value => {
+      const customCategoryControl = this.expenseForm.get('customCategory');
+      if (value === 'new') {
+        customCategoryControl?.setValidators([Validators.required]);
+      } else {
+        customCategoryControl?.clearValidators();
+      }
+      customCategoryControl?.updateValueAndValidity();
+    });
+  }
+
+  private toCents(value: number): number {
+    return Math.round(value * 100);
+  }
+
+
 }
