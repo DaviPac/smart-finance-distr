@@ -166,55 +166,55 @@
         </p>
         }
       </ul>
-      <div class="mt-10">
-        <h3 class="text-2xl font-semibold mb-4 text-gray-700 dark:text-gray-200">
-          Histórico de Pagamentos
-        </h3>
-        <ul class="divide-y divide-gray-200 dark:divide-gray-700">
-          @for (payment of getAllPayments(); track payment.id) {
-          <li class="py-4 flex justify-between items-center">
-            <div class="flex items-center space-x-4">
-              <div
-                class="flex-shrink-0 bg-gray-100 dark:bg-gray-700 p-2 rounded-full"
+    </div>
+    <h3 class="text-2xl font-semibold mb-4 text-gray-700 dark:text-gray-200 mt-5">
+      Histórico de Pagamentos
+    </h3>
+    <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg">
+      <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+        @for (payment of getAllPayments(); track payment.id) {
+        <li class="py-4 flex justify-between items-center">
+          <div class="flex items-center space-x-4">
+            <div
+              class="flex-shrink-0 bg-gray-100 dark:bg-gray-700 p-2 rounded-full"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="w-6 h-6 text-gray-500 dark:text-gray-400"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class="w-6 h-6 text-gray-500 dark:text-gray-400"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-              <div>
-                <p class="font-semibold text-gray-800 dark:text-gray-100">
-                  Pagamento para {{
-                    getUserData(payment.targetId)?.name || 'Membro Desconhecido'
-                  }}
-                </p>
-                <div class="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-                  <span>Pago por: {{ getUserData(payment.payerId)?.name || '...' }}</span>
-                  <span>{{ payment.date | date:'shortDate' }}</span>
-                </div>
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <div>
+              <p class="font-semibold text-gray-800 dark:text-gray-100">
+                Pagamento para {{
+                  getUserData(payment.targetId)?.name || 'Membro Desconhecido'
+                }}
+              </p>
+              <div class="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+                <span>Pago por: {{ getUserData(payment.payerId)?.name || '...' }}</span>
+                <span>{{ payment.date | date:'shortDate' }}</span>
               </div>
             </div>
-            <p class="font-bold text-lg text-purple-600 dark:text-purple-400">
-              {{ payment.value | currency:'BRL' }}
-            </p>
-          </li>
-          } @empty {
-          <p class="text-center text-gray-500 dark:text-gray-400 py-6">
-            Nenhum pagamento registrado neste grupo ainda.
+          </div>
+          <p class="font-bold text-lg text-purple-600 dark:text-purple-400">
+            {{ payment.value | currency:'BRL' }}
           </p>
-          }
-        </ul>
-      </div>
+        </li>
+        } @empty {
+        <p class="text-center text-gray-500 dark:text-gray-400 py-6">
+          Nenhum pagamento registrado neste grupo ainda.
+        </p>
+        }
+      </ul>
     </div>
   </div>
   } @else {
