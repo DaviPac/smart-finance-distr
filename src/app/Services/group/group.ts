@@ -272,6 +272,11 @@ export class GroupsService {
     }
   }
 
+  getGroupByIdAsync(id: string): Group | undefined | Promise<Group | null> {
+    if (this.groups()) return this.getGroupById(id);
+    return this._getGroupDetails(id);
+  }
+
   getGroupById(id: string): Group | undefined {
     return this.groups()?.find(g => g.id === id);
   }
