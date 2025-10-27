@@ -3,6 +3,7 @@ import { Component, computed, Signal, signal, effect, inject } from '@angular/co
 import { Router, RouterModule } from '@angular/router';
 import { User } from '../../models/user.model';
 import { Group } from '../../models/group.model';
+import { Payment } from '../../models/payment.model';
 import { GroupsService } from '../../Services/group/group';
 import { AuthService } from '../../Services/auth/auth';
 import { UsersService } from '../../Services/user/user';
@@ -73,6 +74,14 @@ export class Home {
     });
   }
 
+  private toCents(value: number | string): number {
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num)) {
+      return 0;
+    }
+    return Math.round(num * 100);
+  }
+
   private allExpenses = computed(() => {
     const usersMap = new Map(this.allUsers().map(u => [u.uid, u.name]));
     
@@ -84,6 +93,79 @@ export class Home {
       })) : []
     );
   });
+
+  private financialSummaryInCents = computed(() => {
+    const myId = this.currentUser()?.uid; 
+    const groups = this.groups();
+
+    if (!myId || !groups || groups.length === 0) {
+      return {
+        totalUserPaidInCents: 0,
+        totalUserShareInCents: 0,
+        totalUserPaymentsSentInCents: 0,
+        totalUserPaymentsReceivedInCents: 0
+      };
+    }
+
+    let totalUserPaidInCents = 0;
+    let totalUserShareInCents = 0;
+    let totalUserPaymentsSentInCents = 0;
+    let totalUserPaymentsReceivedInCents = 0;
+
+    for (const group of groups) {
+      const memberIds = group.memberIds ? Object.keys(group.memberIds) : [];
+      const memberCount = memberIds.length;
+
+      if (memberCount === 0 || !memberIds.includes(myId)) {
+        continue;
+      }
+
+      const expenses = group.expenses ? Object.values(group.expenses) : [];
+      const payments = group.payments ? Object.values(group.payments) : [];
+
+      let totalGroupSpendInCents = 0;
+      expenses.forEach(expense => {
+        const expenseInCents = this.toCents(expense.value);
+        totalGroupSpendInCents += expenseInCents;
+        
+        if (expense.payerId === myId) {
+          totalUserPaidInCents += expenseInCents;
+        }
+      });
+
+      if (totalGroupSpendInCents > 0) {
+        const baseShareInCents = Math.floor(totalGroupSpendInCents / memberCount);
+        const remainderCents = totalGroupSpendInCents % memberCount;
+
+        const sortedMemberIds = [...memberIds].sort();
+        const myIndex = sortedMemberIds.indexOf(myId);
+
+        let myShareInCents = baseShareInCents;
+        if (myIndex < remainderCents) {
+          myShareInCents += 1;
+        }
+        totalUserShareInCents += myShareInCents;
+      }
+
+      payments.forEach(payment => {
+        const paymentInCents = this.toCents(payment.value);
+        if (payment.payerId === myId) {
+          totalUserPaymentsSentInCents += paymentInCents;
+        } else if (payment.targetId === myId) {
+          totalUserPaymentsReceivedInCents += paymentInCents;
+        }
+      });
+    }
+
+    return { 
+      totalUserPaidInCents, 
+      totalUserShareInCents, 
+      totalUserPaymentsSentInCents, 
+      totalUserPaymentsReceivedInCents 
+    };
+  });
+
+    
 
   private financialSummary = computed(() => {
     const myId = this.currentUser()?.uid; 
@@ -123,18 +205,27 @@ export class Home {
   });
 
   owedToUser = computed(() => {
-    const { totalUserPaid, totalUserShare } = this.financialSummary();
-    return Math.max(0, totalUserPaid - totalUserShare);
+    return Math.max(0, this.netBalance());
   });
 
   userOwes = computed(() => {
-    const { totalUserPaid, totalUserShare } = this.financialSummary();
-    return Math.max(0, totalUserShare - totalUserPaid);
+    return Math.max(0, -this.netBalance());
   });
 
   netBalance = computed(() => {
-    const { totalUserPaid, totalUserShare } = this.financialSummary();
-    return totalUserPaid - totalUserShare;
+    const { 
+      totalUserPaidInCents, 
+      totalUserShareInCents, 
+      totalUserPaymentsSentInCents, 
+      totalUserPaymentsReceivedInCents 
+    } = this.financialSummaryInCents();
+
+    const totalCreditsInCents = totalUserPaidInCents + totalUserPaymentsSentInCents;
+    const totalDebitsInCents = totalUserShareInCents + totalUserPaymentsReceivedInCents;
+
+    const netBalanceInCents = totalCreditsInCents - totalDebitsInCents;
+
+    return netBalanceInCents / 100.0;
   });
 
   recentExpenses = computed(() => {
@@ -166,16 +257,16 @@ export class Home {
     const expenses = this.allExpenses();
     if (!expenses) return { labels: [], data: [] };
 
-    const totals = new Map<string, number>();
+    const totalsInCents = new Map<string, number>();
 
     for (const exp of expenses) {
       const cat = exp.category || 'Sem categoria';
-      const val = Number(exp.value) || 0;
-      totals.set(cat, (totals.get(cat) || 0) + val);
+      const valInCents = this.toCents(exp.value); // Usa o helper
+      totalsInCents.set(cat, (totalsInCents.get(cat) || 0) + valInCents);
     }
 
-    const labels = Array.from(totals.keys());
-    const data = Array.from(totals.values());
+    const labels = Array.from(totalsInCents.keys());
+    const data = Array.from(totalsInCents.values()).map(cents => cents / 100.0);
 
     return { labels, data };
   });
