@@ -38,4 +38,8 @@ export class Navbar {
     return this.authService.currentUser()?.email;
   }
 
+  isAuthenticated() {
+    return this.authService.currentUser()
+  }
+
 }
