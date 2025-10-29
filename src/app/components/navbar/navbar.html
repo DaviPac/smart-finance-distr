@@ -115,7 +115,7 @@
   </nav>
 
   <nav
-    class="bg-white dark:bg-gray-900 shadow-md dark:border-b dark:border-gray-700 top-0 left-0 right-0 z-50 md:hidden -mb-16"
+    class="bg-white dark:bg-gray-900 shadow-md dark:border-b dark:border-gray-700 top-0 left-0 right-0 md:hidden -mb-16"
   >
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
@@ -140,8 +140,13 @@
       <a
         [routerLink]="['/']"
         [routerLinkActiveOptions]="{ exact: true }"
-        routerLinkActive="text-blue-600 dark:text-blue-400"
-        class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+        routerLinkActive
+        #rlaHome="routerLinkActive"
+        class="flex flex-col items-center justify-center hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+        [class.text-blue-600]="rlaHome.isActive"
+        [class.dark:text-blue-400]="rlaHome.isActive"
+        [class.text-gray-500]="!rlaHome.isActive"
+        [class.dark:text-gray-300]="!rlaHome.isActive"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -162,8 +167,13 @@
 
       <a
         [routerLink]="['/groups']"
-        routerLinkActive="text-blue-600 dark:text-blue-400"
-        class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+        routerLinkActive
+        #rlaGroups="routerLinkActive"
+        class="flex flex-col items-center justify-center hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+        [class.text-blue-600]="rlaGroups.isActive"
+        [class.dark:text-blue-400]="rlaGroups.isActive"
+        [class.text-gray-500]="!rlaGroups.isActive"
+        [class.dark:text-gray-300]="!rlaGroups.isActive"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -185,8 +195,13 @@
 
       <a
         [routerLink]="['/profile']"
-        routerLinkActive="text-blue-600 dark:text-blue-400"
-        class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+        routerLinkActive
+        #rlaProfile="routerLinkActive"
+        class="flex flex-col items-center justify-center hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+        [class.text-blue-600]="rlaProfile.isActive"
+        [class.dark:text-blue-400]="rlaProfile.isActive"
+        [class.text-gray-500]="!rlaProfile.isActive"
+        [class.dark:text-gray-300]="!rlaProfile.isActive"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
