@@ -18,10 +18,6 @@ import { ReactiveFormsModule, NonNullableFormBuilder, Validators } from '@angula
 })
 export class Home {
 
-  // --- 3. INJEÇÃO DOS SERVIÇOS ---
-  loading: Signal<boolean>;
-  groups: Signal<Group[] | null>;
-  currentUser: Signal<User | null>;
   isJoiningGroup = signal(false);
   addingExpense = signal(false);
   addExpenseLoading = signal(false);
@@ -32,6 +28,10 @@ export class Home {
   private authService = inject(AuthService);
   private usersService = inject(UsersService);
   private router = inject(Router);
+
+  loading = this.groupService.loading;
+  currentUser = this.authService.currentUser;
+  groups = this.groupService.groups;
 
   // Form de adicionar gasto
   private fb = inject(NonNullableFormBuilder);
@@ -44,15 +44,11 @@ export class Home {
   });
 
   constructor() {
-    // --- LIGAÇÃO DOS SINAIS ---
-    this.loading = this.groupService.loading;
-    this.currentUser = this.authService.currentUser;
-    this.groups = this.groupService.groups;
 
     effect(() => {
       const user = this.currentUser();   
       if (user && user.uid) {
-        this.groupService.loadUserGroups();
+        (!this.groups()?.length) && this.groupService.loadUserGroups();
       }
     });
 
