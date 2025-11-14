@@ -85,7 +85,7 @@ func (app *AppConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	restURL := fmt.Sprintf("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=%s", app.APIKey)
 
-	fbReqBody, _ := json.Marshal(map[string]interface{}{
+	fbReqBody, _ := json.Marshal(map[string]any{
 		"email":             req.Email,
 		"password":          req.Password,
 		"returnSecureToken": true,
@@ -130,7 +130,10 @@ func (app *AppConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 	})
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
+	json.NewEncoder(w).Encode(map[string]any{
+		"user":  user,
+		"token": tokenString,
+	})
 }
 
 func (app *AppConfig) handleGetMe(w http.ResponseWriter, r *http.Request) {
