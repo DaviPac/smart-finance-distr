@@ -11,6 +11,7 @@ import (
 	"firebase.google.com/go/v4/db"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
 	"google.golang.org/api/option"
 )
@@ -61,6 +62,16 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins: []string{
+			"http://localhost:4200",
+			"https://smart-finance-distr.vercel.app",
+		},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type"},
+
+		AllowCredentials: true,
+	}))
 
 	r.Post("/api/register", configApp.handleRegister)
 	r.Post("/api/login", configApp.handleLogin)
