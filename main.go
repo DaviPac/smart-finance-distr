@@ -28,10 +28,13 @@ func main() {
 	}
 
 	ctx := context.Background()
-	saKey := os.Getenv("FIREBASE_SERVICE_ACCOUNT_KEY")
+	raw := os.Getenv("FIREBASE_SERVICE_ACCOUNT_KEY")
+	if raw == "" {
+		log.Fatal("FIREBASE_SERVICE_ACCOUNT_KEY não encontrada no ambiente")
+	}
 	dbURL := os.Getenv("FIREBASE_DATABASE_URL")
 
-	opt := option.WithCredentialsFile(saKey)
+	opt := option.WithCredentialsJSON([]byte(raw))
 	config := &firebase.Config{DatabaseURL: dbURL}
 
 	app, err := firebase.NewApp(ctx, config, opt)
