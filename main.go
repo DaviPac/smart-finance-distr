@@ -78,6 +78,7 @@ func main() {
 		r.Get("/api/groups", configApp.handleGetMyGroups)
 		r.Get("/api/groups/{uid}", configApp.handleGetGroup)
 		r.Post("/api/join/{uid}", configApp.handleJoinGroup)
+		r.Post("/api/group", configApp.handlePostGroup)
 	})
 
 	port := os.Getenv("PORT")
