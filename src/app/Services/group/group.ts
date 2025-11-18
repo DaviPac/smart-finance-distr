@@ -15,7 +15,8 @@ export class GroupsService {
 
   private readonly _groups = signal<Group[] | null>(null);
   public readonly groups = this._groups.asReadonly();
-  public readonly loading = signal<boolean>(true);
+  public readonly loading = signal<boolean>(false);
+  public readonly loaded = signal<boolean>(false);
   public currentGroup = signal<Group | null>(null);
 
   constructor() {
@@ -40,6 +41,8 @@ export class GroupsService {
       return;
     }
 
+    this.loading.set(true);
+
     try {
       const resp = await fetch("https://smart-finance-groups-production.up.railway.app/api/groups", {
         headers: {
@@ -61,6 +64,7 @@ export class GroupsService {
       this._groups.set([]);
     } finally {
       this.loading.set(false);
+      this.loaded.set(true)
     }
   }
 

@@ -48,7 +48,7 @@ export class Home {
     effect(() => {
       const user = this.currentUser();   
       if (user && user.uid) {
-        (!this.groupService.loading()) && this.groupService.loadUserGroups();
+        (!this.groups()?.length) && !this.groupService.loaded() && this.groupService.loadUserGroups();
       }
     });
 
