@@ -95,3 +95,22 @@ func (app *AppConfig) getGroup(ctx context.Context, uid string) (*Group, error) 
 	}
 	return &group, nil
 }
+
+func (app *AppConfig) handleJoinGroup(w http.ResponseWriter, r *http.Request) {
+	uid, ok := r.Context().Value(userUIDKey).(string)
+	if !ok {
+		http.Error(w, "Não autorizado", http.StatusUnauthorized)
+		return
+	}
+	groupUID := chi.URLParam(r, "uid")
+	userGroupsRef := app.DBClient.NewRef("user_groups/" + uid)
+	userGroupsRef.Set(r.Context(), map[string]bool{
+		groupUID: true,
+	})
+	groupMembersRef := app.DBClient.NewRef("groups/" + groupUID + "/memberiDS")
+	groupMembersRef.Set(r.Context(), map[string]bool{
+		uid: true,
+	})
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(true)
+}

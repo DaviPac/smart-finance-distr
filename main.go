@@ -77,6 +77,7 @@ func main() {
 		r.Use(configApp.authMiddleware)
 		r.Get("/api/groups", configApp.handleGetMyGroups)
 		r.Get("/api/groups/{uid}", configApp.handleGetGroup)
+		r.Post("/api/join/{uid}", configApp.handleJoinGroup)
 	})
 
 	port := os.Getenv("PORT")
