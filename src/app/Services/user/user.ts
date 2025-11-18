@@ -1,8 +1,6 @@
 import { inject, Injectable, Injector } from '@angular/core';
-import { Database, get, ref, set } from '@angular/fire/database';
 import { AuthService } from '../auth/auth';
 import runInContext from '../../decorators/run-in-context-decorator';
-import { child } from 'firebase/database';
 import { User } from '../../models/user.model';
 
 @Injectable({
@@ -10,36 +8,27 @@ import { User } from '../../models/user.model';
 })
 export class UsersService {
 
-  //- Injeção de Dependências
-  private db: Database = inject(Database);
   private authService: AuthService = inject(AuthService);
   injector = inject(Injector);
 
   @runInContext()
   async changeUsername(newName: string) {
-    try {
-      const user = this.authService.currentUser();
-      if (!user) return;
-      const newUserData: User = {
-        ...user,
-        name: newName
-      };
-      const userRef = ref(this.db, `users/${user.uid}`);
-      await set(userRef, newUserData);
-    }
-    catch (e: unknown) {
-      const error = e as Error;
-      console.log(error.message);
-      throw error;
-    }
+    throw new Error("mudar nome nao implementado")
   }
 
   @runInContext()
   async getUserById(uid: string): Promise<User | null> {
-      const userRef = ref(this.db);
-      const snapshot = await get(child(userRef, `users/${uid}`));
-      if (snapshot.exists()) return snapshot.val() as User;
-      return null
+    try {
+      const resp = await fetch("https://smart-finance-auth-production.up.railway.app/api/users/" + uid, {
+        headers: {
+          "Authorization": "Bearer " + this.authService.token
+        }
+      })
+      if (!resp.ok) return null
+      const data = await resp.json()
+      console.log(data)
+      return data
+    } catch (e) { return null }
   }
 
 }
