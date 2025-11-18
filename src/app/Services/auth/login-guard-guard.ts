@@ -6,8 +6,7 @@ export const loginGuard: CanActivateFn = (_route, _state) => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  // Se o usuário JÁ ESTIVER logado...
-  if (authService.isAuthenticated() && authService.isLoggedIn()) {
+  if (authService.isAuthenticated()) {
     router.navigate(['/groups']);
     return false;
   }

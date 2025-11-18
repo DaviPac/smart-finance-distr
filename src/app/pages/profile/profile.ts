@@ -17,7 +17,6 @@ export class Profile {
   injector = inject(Injector)
 
   user = this.authService.currentUser
-  firebaseUser = this.authService.currentFirebaseUser
   isLoading = signal(false)
   successMessage = signal<string | null>(null)
   errorMessage = signal<string | null>(null)
