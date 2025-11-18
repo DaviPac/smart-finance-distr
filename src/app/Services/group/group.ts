@@ -76,6 +76,7 @@ export class GroupsService {
   @runInContext()
   async joinGroup(groupId: string): Promise<void> {
     await fetch("https://smart-finance-groups-production.up.railway.app/api/join/" + groupId, {
+      method: "POST",
       headers: {
         "Authorization": "Bearer " + this.authService.token
       }
