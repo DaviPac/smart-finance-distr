@@ -72,8 +72,12 @@ export class GroupsService {
   }
 
   @runInContext()
-  async joinGroup(groupId: string): Promise<Group> {
-    throw new Error("entrar em grupo não foi implementado")
+  async joinGroup(groupId: string): Promise<void> {
+    await fetch("https://smart-finance-groups-production.up.railway.app/api/join/" + groupId, {
+      headers: {
+        "Authorization": "Bearer " + this.authService.token
+      }
+    })
   }
 
   @runInContext()
