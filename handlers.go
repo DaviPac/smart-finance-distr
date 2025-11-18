@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -37,6 +38,10 @@ type Payment struct {
 	PayerId  string  `json:"payerId"`
 	TargetId string  `json:"targetId"`
 	Value    float64 `json:"value"`
+}
+
+type GroupRequest struct {
+	Name string
 }
 
 func (app *AppConfig) handleGetMyGroups(w http.ResponseWriter, r *http.Request) {
@@ -94,6 +99,50 @@ func (app *AppConfig) getGroup(ctx context.Context, uid string) (*Group, error) 
 		return nil, fmt.Errorf("grupo não encontrado")
 	}
 	return &group, nil
+}
+
+func (app *AppConfig) handlePostGroup(w http.ResponseWriter, r *http.Request) {
+	uid, ok := r.Context().Value(userUIDKey).(string)
+	if !ok {
+		http.Error(w, "Não autorizado", http.StatusUnauthorized)
+		return
+	}
+	var req GroupRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "JSON inválido", http.StatusBadRequest)
+		return
+	}
+	groupsRef := app.DBClient.NewRef("groups")
+	newGroupRef, err := groupsRef.Push(r.Context(), nil)
+	if err != nil {
+		http.Error(w, "Erro ao criar grupo", http.StatusInternalServerError)
+		return
+	}
+	groupUID := newGroupRef.Key
+	groupRef := app.DBClient.NewRef("groups/" + groupUID)
+	groupData := Group{
+		CreatedAt:   time.Now().UTC().Format(time.RFC3339Nano),
+		Description: "",
+		Expenses:    map[string]Expense{},
+		MemberIds:   map[string]bool{},
+		Name:        req.Name,
+		OwnerId:     uid,
+		Payments:    map[string]Payment{},
+		Id:          groupUID,
+	}
+	if err = groupRef.Set(r.Context(), groupData); err != nil {
+		http.Error(w, "Erro ao criar grupo", http.StatusInternalServerError)
+		return
+	}
+	userGroupsRef := app.DBClient.NewRef("user_groups/" + uid)
+	if err = userGroupsRef.Set(r.Context(), map[string]bool{
+		groupUID: true,
+	}); err != nil {
+		http.Error(w, "Erro ao criar grupo", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(groupData)
 }
 
 func (app *AppConfig) handleJoinGroup(w http.ResponseWriter, r *http.Request) {
