@@ -48,7 +48,7 @@ export class Home {
     effect(() => {
       const user = this.currentUser();   
       if (user && user.uid) {
-        (!this.groups()?.length) && this.groupService.loadUserGroups();
+        (!this.groupService.loading()) && this.groupService.loadUserGroups();
       }
     });
 
@@ -280,9 +280,9 @@ export class Home {
 
     this.isJoiningGroup.set(true);
     try {
-      const joinedGroup = await this.groupService.joinGroup(groupId.trim());
+      await this.groupService.joinGroup(groupId.trim());
       
-      alert(`Sucesso! Você agora está no grupo "${joinedGroup.name}".`);
+      alert(`Sucesso! Você agora está no grupo!`);
     
     } catch (error: any) {
       console.error("Erro ao entrar no grupo:", error);
