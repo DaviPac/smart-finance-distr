@@ -72,14 +72,15 @@ export class GroupsService {
   async createGroup(groupName: string, description: string = 'Sem descrição'): Promise<Group> {
     const resp = await fetch("https://smart-finance-groups-production.up.railway.app/api/group", {
       method: "POST",
+      body: JSON.stringify({ name: groupName }),
       headers: {
         "Authorization": "Bearer " + this.authService.token
       }
     })
     if (!resp.ok) throw new Error("erro ao criar grupo")
     const data = await resp.json()
-    return data
     await this.loadUserGroups()
+    return data
   }
 
   @runInContext()
