@@ -41,7 +41,7 @@ type Payment struct {
 }
 
 type GroupRequest struct {
-	Name string
+	Name string `json:"name"`
 }
 
 func (app *AppConfig) handleGetMyGroups(w http.ResponseWriter, r *http.Request) {
