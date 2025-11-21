@@ -156,7 +156,7 @@ func (app *AppConfig) handleJoinGroup(w http.ResponseWriter, r *http.Request) {
 	userGroupsRef.Set(r.Context(), map[string]bool{
 		groupUID: true,
 	})
-	groupMembersRef := app.DBClient.NewRef("groups/" + groupUID + "/memberiDS")
+	groupMembersRef := app.DBClient.NewRef("groups/" + groupUID + "/memberIds")
 	groupMembersRef.Set(r.Context(), map[string]bool{
 		uid: true,
 	})
