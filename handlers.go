@@ -135,7 +135,7 @@ func (app *AppConfig) handlePostGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userGroupsRef := app.DBClient.NewRef("user_groups/" + uid)
-	if err = userGroupsRef.Set(r.Context(), map[string]bool{
+	if err = userGroupsRef.Update(r.Context(), map[string]any{
 		groupUID: true,
 	}); err != nil {
 		http.Error(w, "Erro ao criar grupo", http.StatusInternalServerError)
