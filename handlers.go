@@ -124,7 +124,7 @@ func (app *AppConfig) handlePostGroup(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:   time.Now().UTC().Format(time.RFC3339Nano),
 		Description: "",
 		Expenses:    map[string]Expense{},
-		MemberIds:   map[string]bool{},
+		MemberIds:   map[string]bool{uid: true},
 		Name:        req.Name,
 		OwnerId:     uid,
 		Payments:    map[string]Payment{},
@@ -153,11 +153,11 @@ func (app *AppConfig) handleJoinGroup(w http.ResponseWriter, r *http.Request) {
 	}
 	groupUID := chi.URLParam(r, "uid")
 	userGroupsRef := app.DBClient.NewRef("user_groups/" + uid)
-	userGroupsRef.Set(r.Context(), map[string]bool{
+	userGroupsRef.Update(r.Context(), map[string]any{
 		groupUID: true,
 	})
 	groupMembersRef := app.DBClient.NewRef("groups/" + groupUID + "/memberIds")
-	groupMembersRef.Set(r.Context(), map[string]bool{
+	groupMembersRef.Update(r.Context(), map[string]any{
 		uid: true,
 	})
 	w.Header().Set("Content-Type", "application/json")
