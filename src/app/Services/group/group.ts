@@ -52,6 +52,9 @@ export class GroupsService {
       if (!resp.ok) throw new Error("erro ao buscar grupos")
       const groups: Group[] = await resp.json()
       groups.forEach(g => {
+        if (g.memberIds) {
+          g.memberIds = Object.keys(g.memberIds)
+        }
         if (g.expenses) {
           g.expenses = Object.values(g.expenses)
           g.expenses.forEach(e => e.date = new Date(e.date))
