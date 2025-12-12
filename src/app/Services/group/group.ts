@@ -98,8 +98,38 @@ export class GroupsService {
   }
 
   @runInContext()
-  async createExpense(data: Omit<Expense, 'id' | 'date' | 'payerId'>): Promise<Expense> {
-    throw new Error("criação de despesa não foi implementado")
+  async createExpense(expenseData: Omit<Expense, 'id' | 'date' | 'payerId'>): Promise<Expense> {
+    const resp = await fetch(`https://smart-finance-groups-production.up.railway.app/api/groups/${expenseData.groupId}/expenses`, {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + this.authService.token
+      },
+      body: JSON.stringify({
+        category: expenseData.category,
+        description: expenseData.description,
+        value: expenseData.value
+      })
+    })
+
+    if (!resp.ok) throw new Error("Erro na criação de despesa: " + await resp.text())
+    
+    const newExpense: Expense = await resp.json()
+    newExpense.date = new Date(newExpense.date)
+
+    this._groups.update(groups => {
+      if (!groups) return null;
+      return groups.map(g => {
+        if (g.id === expenseData.groupId) {
+          return {
+            ...g,
+            expenses: [...(g.expenses || []), newExpense]
+          };
+        }
+        return g;
+      });
+    });
+
+    return newExpense
   }
 
   @runInContext()
