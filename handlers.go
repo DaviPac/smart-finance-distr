@@ -40,8 +40,19 @@ type Payment struct {
 	Value    float64 `json:"value"`
 }
 
+type PaymentRequest struct {
+	TargetId string  `json:"targetId"`
+	Value    float64 `json:"value"`
+}
+
 type GroupRequest struct {
 	Name string `json:"name"`
+}
+
+type ExpenseRequest struct {
+	Category    string  `json:"category"`
+	Description string  `json:"description"`
+	Value       float64 `json:"value"`
 }
 
 func (app *AppConfig) handleGetMyGroups(w http.ResponseWriter, r *http.Request) {
@@ -162,4 +173,139 @@ func (app *AppConfig) handleJoinGroup(w http.ResponseWriter, r *http.Request) {
 	})
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(true)
+}
+
+func (app *AppConfig) handlePostExpense(w http.ResponseWriter, r *http.Request) {
+	uid, ok := r.Context().Value(userUIDKey).(string)
+	if !ok {
+		http.Error(w, "Não autorizado", http.StatusUnauthorized)
+		return
+	}
+	var req ExpenseRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "JSON inválido", http.StatusBadRequest)
+		return
+	}
+	groupUID := chi.URLParam(r, "uid")
+	expensesRef := app.DBClient.NewRef("groups/" + groupUID + "/expenses")
+	newExpenseRef, err := expensesRef.Push(r.Context(), nil)
+	if err != nil {
+		http.Error(w, "Erro ao criar despesa", http.StatusInternalServerError)
+		return
+	}
+	expenseUID := newExpenseRef.Key
+	expenseRef := app.DBClient.NewRef("groups/" + groupUID + "/expenses/" + expenseUID)
+	expenseData := Expense{
+		Category:    req.Category,
+		Date:        float64(time.Now().UnixMilli()),
+		Description: req.Description,
+		GroupId:     groupUID,
+		Id:          expenseUID,
+		PayerId:     uid,
+		Value:       req.Value,
+	}
+	if err = expenseRef.Set(r.Context(), expenseData); err != nil {
+		http.Error(w, "Erro ao criar despesa", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(expenseData)
+}
+
+func (app *AppConfig) handleDeleteExpense(w http.ResponseWriter, r *http.Request) {
+	uid, ok := r.Context().Value(userUIDKey).(string)
+	if !ok {
+		http.Error(w, "Não autorizado", http.StatusUnauthorized)
+		return
+	}
+	groupUID := chi.URLParam(r, "uid")
+	expenseUID := chi.URLParam(r, "expenseId")
+	if groupUID == "" || expenseUID == "" {
+		http.Error(w, "Parâmetros inválidos", http.StatusBadRequest)
+		return
+	}
+	path := "groups/" + groupUID + "/expenses/" + expenseUID
+	expenseRef := app.DBClient.NewRef(path)
+	var expenseData Expense
+	err := expenseRef.Get(r.Context(), &expenseData)
+	if err != nil {
+		http.Error(w, "Erro ao procurar despesa", http.StatusInternalServerError)
+		return
+	}
+	if uid != expenseData.PayerId {
+		http.Error(w, "Não autorizado", http.StatusUnauthorized)
+		return
+	}
+	if err := expenseRef.Delete(r.Context()); err != nil {
+		http.Error(w, "Erro ao deletar despesa", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (app *AppConfig) handlePostPayment(w http.ResponseWriter, r *http.Request) {
+	uid, ok := r.Context().Value(userUIDKey).(string)
+	if !ok {
+		http.Error(w, "Não autorizado", http.StatusUnauthorized)
+		return
+	}
+	var req PaymentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "JSON inválido", http.StatusBadRequest)
+		return
+	}
+	groupUID := chi.URLParam(r, "uid")
+	paymentsRef := app.DBClient.NewRef("groups/" + groupUID + "/payments")
+	newPaymentRef, err := paymentsRef.Push(r.Context(), nil)
+	if err != nil {
+		http.Error(w, "Erro ao criar pagamento", http.StatusInternalServerError)
+		return
+	}
+	paymentUID := newPaymentRef.Key
+	paymentRef := app.DBClient.NewRef("groups/" + groupUID + "/payments/" + paymentUID)
+	paymentData := Payment{
+		Date:     time.Now().UTC().Format(time.RFC3339Nano),
+		GroupId:  groupUID,
+		Id:       paymentUID,
+		PayerId:  uid,
+		TargetId: req.TargetId,
+		Value:    req.Value,
+	}
+	if err = paymentRef.Set(r.Context(), paymentData); err != nil {
+		http.Error(w, "Erro ao criar pagamento", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(paymentData)
+}
+
+func (app *AppConfig) handleDeletePayment(w http.ResponseWriter, r *http.Request) {
+	uid, ok := r.Context().Value(userUIDKey).(string)
+	if !ok {
+		http.Error(w, "Não autorizado", http.StatusUnauthorized)
+		return
+	}
+	groupUID := chi.URLParam(r, "uid")
+	paymentUID := chi.URLParam(r, "paymentId")
+	if groupUID == "" || paymentUID == "" {
+		http.Error(w, "Parâmetros inválidos", http.StatusBadRequest)
+		return
+	}
+	path := "groups/" + groupUID + "/payments/" + paymentUID
+	paymentRef := app.DBClient.NewRef(path)
+	var paymentData Payment
+	err := paymentRef.Get(r.Context(), &paymentData)
+	if err != nil {
+		http.Error(w, "Erro ao procurar pagamento", http.StatusInternalServerError)
+		return
+	}
+	if uid != paymentData.PayerId {
+		http.Error(w, "Não autorizado", http.StatusUnauthorized)
+		return
+	}
+	if err := paymentRef.Delete(r.Context()); err != nil {
+		http.Error(w, "Erro ao deletar pagamento", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

@@ -79,6 +79,10 @@ func main() {
 		r.Get("/api/groups/{uid}", configApp.handleGetGroup)
 		r.Post("/api/join/{uid}", configApp.handleJoinGroup)
 		r.Post("/api/group", configApp.handlePostGroup)
+		r.Post("/api/groups/{uid}/expenses", configApp.handlePostExpense)
+		r.Delete("/api/groups/{uid}/expenses/{expenseId}", configApp.handleDeleteExpense)
+		r.Post("/api/groups/{uid}/payments", configApp.handlePostPayment)
+		r.Delete("/api/groups/{uid}/payments/paymentId", configApp.handleDeletePayment)
 	})
 
 	port := os.Getenv("PORT")
