@@ -46,7 +46,7 @@ export class AuthService {
     try {
       const resp = await fetch("https://smart-finance-auth-production.up.railway.app/api/register", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, name }),
       })
       if (!resp.ok) throw new Error("erro ao se registrar")
       await this.login(email, password)
