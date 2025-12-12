@@ -82,7 +82,7 @@ func main() {
 		r.Post("/api/groups/{uid}/expenses", configApp.handlePostExpense)
 		r.Delete("/api/groups/{uid}/expenses/{expenseId}", configApp.handleDeleteExpense)
 		r.Post("/api/groups/{uid}/payments", configApp.handlePostPayment)
-		r.Delete("/api/groups/{uid}/payments/paymentId", configApp.handleDeletePayment)
+		r.Delete("/api/groups/{uid}/payments/{paymentId}", configApp.handleDeletePayment)
 	})
 
 	port := os.Getenv("PORT")
