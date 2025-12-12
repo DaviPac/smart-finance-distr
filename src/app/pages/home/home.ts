@@ -59,7 +59,7 @@ export class Home {
         return;
       }
 
-      const memberIds = new Set(groups.flatMap(g => g.memberIds ? Object.keys(g.memberIds) : []));
+      const memberIds = new Set(groups.flatMap(g => g.memberIds ? g.memberIds : []));
       const payerIds = new Set(groups.flatMap(g => g.expenses ? Object.values(g.expenses).map(e => e.payerId) : []));
       
       const allIds = Array.from(new Set([...memberIds, ...payerIds]));
@@ -109,7 +109,7 @@ export class Home {
     let totalUserPaymentsReceivedInCents = 0;
 
     for (const group of groups) {
-      const memberIds = group.memberIds ? Object.keys(group.memberIds) : [];
+      const memberIds = group.memberIds ? group.memberIds : [];
       const memberCount = memberIds.length;
 
       if (memberCount === 0 || !memberIds.includes(myId)) {
@@ -175,7 +175,7 @@ export class Home {
     let totalUserShare = 0;
 
     for (const group of groups) {
-      const numMembers = group.memberIds ? Object.keys(group.memberIds).length : 0;
+      const numMembers = group.memberIds ? group.memberIds.length : 0;
       
       if (numMembers === 0) {
         continue;
@@ -237,7 +237,7 @@ export class Home {
     return this.groups()
       ?.map((group: Group) => {
         let lastActivityTime = 0;
-        if (group.expenses && Object.keys(group.expenses).length > 0) {
+        if (group.expenses && group.expenses.length > 0) {
           lastActivityTime = Math.max(
             0, 
             ...Object.values(group.expenses).map(e => new Date(e.date).getTime())

@@ -332,7 +332,7 @@ export class GroupDetail implements OnInit {
     if (groupFromService) {
       const processedGroup: Group = {
         ...groupFromService,
-        memberIds: Object.keys(groupFromService.memberIds),
+        memberIds: groupFromService.memberIds,
         expenses: groupFromService.expenses ? Object.values(groupFromService.expenses) : []
       };
       
