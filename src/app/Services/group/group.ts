@@ -134,12 +134,85 @@ export class GroupsService {
 
   @runInContext()
   async deleteExpense(groupId: string, expenseId: string): Promise<void> {
-    throw new Error("deleção de despesa não foi implementado")
+    const resp = await fetch(`https://smart-finance-groups-production.up.railway.app/api/groups/${groupId}/expenses/${expenseId}`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": "Bearer " + this.authService.token
+      }
+    })
+
+    if (!resp.ok) throw new Error("Erro ao deletar despesa: " + await resp.text())
+
+    this._groups.update(groups => {
+      if (!groups) return null;
+      return groups.map(g => {
+        if (g.id === groupId) {
+          return {
+            ...g,
+            expenses: g.expenses?.filter(e => e.id !== expenseId) || []
+          };
+        }
+        return g;
+      });
+    });
   }
 
   @runInContext()
   async createPayment(data: Omit<Payment, 'id' | 'date' | 'payerId'>): Promise<Payment> {
-    throw new Error("criação de pagamentos não foi implementado")
+    const resp = await fetch(`https://smart-finance-groups-production.up.railway.app/api/groups/${data.groupId}/payments`, {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + this.authService.token
+      },
+      body: JSON.stringify({
+        targetId: data.targetId,
+        value: data.value
+      })
+    })
+
+    if (!resp.ok) throw new Error("Erro ao criar pagamento: " + await resp.text())
+
+    const newPayment: Payment = await resp.json()
+
+    this._groups.update(groups => {
+      if (!groups) return null;
+      return groups.map(g => {
+        if (g.id === data.groupId) {
+          return {
+            ...g,
+            payments: [...(g.payments || []), newPayment]
+          };
+        }
+        return g;
+      });
+    });
+
+    return newPayment;
+  }
+
+  @runInContext()
+  async deletePayment(groupId: string, paymentId: string): Promise<void> {
+    const resp = await fetch(`https://smart-finance-groups-production.up.railway.app/api/groups/${groupId}/payments/${paymentId}`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": "Bearer " + this.authService.token
+      }
+    })
+
+    if (!resp.ok) throw new Error("Erro ao deletar pagamento: " + await resp.text())
+
+    this._groups.update(groups => {
+      if (!groups) return null;
+      return groups.map(g => {
+        if (g.id === groupId) {
+          return {
+            ...g,
+            payments: g.payments?.filter(p => p.id !== paymentId) || []
+          };
+        }
+        return g;
+      });
+    });
   }
 
   getGroupByIdAsync(id: string): Group | undefined | Promise<Group | null> {
