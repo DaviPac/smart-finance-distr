@@ -1,7 +1,5 @@
-import { HttpClient } from '@angular/common/http';
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { AuthService } from '../auth/auth';
-import { firstValueFrom } from 'rxjs';
 
 export interface Debt {
   userId: string;
@@ -11,12 +9,12 @@ export interface Debt {
 export interface GroupAnalysis {
   groupId: string;
   groupName: string;
-  myBalance: number;       
-  totalSpent: number;      
-  myTotalSpent: number;    
-  owedBy: Debt[];          // Quem me deve
-  oweTo: Debt[];           // A quem eu devo
-  categorySummary: { [key: string]: number }; 
+  myBalance: number;
+  totalSpent: number;
+  myTotalSpent: number;
+  owedBy: Debt[];
+  oweTo: Debt[];
+  categorySummary: { [key: string]: number };
 }
 
 export interface GeneralAnalysis {
@@ -30,30 +28,39 @@ export interface GeneralAnalysis {
   providedIn: 'root'
 })
 export class AnalyticsService {
-  private http = inject(HttpClient);
   private authService = inject(AuthService);
 
-  // URL do microsserviço de análise
-  private readonly API_URL = 'smart-finance-analysis-production.up.railway.app/api/analysis';
+  private readonly API_URL =
+    'https://smart-finance-analysis-production.up.railway.app/api/analysis';
+
+  private async request<T>(url: string): Promise<T> {
+    const token = this.authService.token;
+
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Erro ${res.status}: ${text}`);
+    }
+
+    return res.json() as Promise<T>;
+  }
 
   async getGroupAnalysis(groupId: string): Promise<GroupAnalysis> {
-    const token = this.authService.token;
-    return firstValueFrom(
-      this.http.get<GroupAnalysis>(`${this.API_URL}/group/${groupId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+    return this.request<GroupAnalysis>(
+      `${this.API_URL}/group/${groupId}`
     );
   }
 
   async getGeneralAnalysis(): Promise<GeneralAnalysis> {
-    const token = this.authService.token
-    
-    return firstValueFrom(
-      this.http.get<GeneralAnalysis>(`${this.API_URL}/general`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      })
+    return this.request<GeneralAnalysis>(
+      `${this.API_URL}/general`
     );
   }
 }
