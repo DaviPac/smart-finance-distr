@@ -3,7 +3,7 @@ import { Component, computed, Signal, signal, effect, inject } from '@angular/co
 import { Router, RouterModule } from '@angular/router';
 import { User } from '../../models/user.model';
 import { Group } from '../../models/group.model';
-import { AnalyticsService, GeneralAnalysis } from '../../Services/analysis/analysis';
+import { AnalyticsService, GeneralAnalysis } from '../../Services/analysis/analytics.service';
 import { GroupsService } from '../../Services/group/group';
 import { AuthService } from '../../Services/auth/auth';
 import { UsersService } from '../../Services/user/user';
