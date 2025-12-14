@@ -318,7 +318,7 @@ export class GroupDetail implements OnInit {
     return this.totalSpendInCents() / 100.0;
   }
 
-  getAllPayments = () => {
+  getAllPayments = (): Payment[] => {
     const g = this.group();
     if (!g?.payments) return [];
     return Array.isArray(g.payments) ? g.payments : Object.values(g.payments);
