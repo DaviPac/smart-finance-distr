@@ -1,12 +1,12 @@
 <div class="p-4 md:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
   @if (loading()) {
-  <p class="text-center text-gray-500 dark:text-gray-400">
-    Carregando detalhes do grupo...
-  </p>
+  <div class="flex flex-col items-center justify-center h-64 space-y-4">
+    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    <p class="text-gray-500 dark:text-gray-400">Carregando detalhes do grupo...</p>
+  </div>
   } @else { @if (group(); as groupData) {
-  <div
-    class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6"
-  >
+  
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
     <div>
       <h2 class="text-4xl font-bold text-gray-800 dark:text-gray-100">
         {{ groupData.name }}
@@ -15,18 +15,20 @@
         Membros: {{ groupData.memberIds.length }}
       </p>
     </div>
-    <button
-      (click)="openAddExpenseModal()"
-      class="mt-4 md:mt-0 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow transition duration-200"
-    >
-      Adicionar Gasto
-    </button>
-    <button
-      (click)="openAddPaymentModal()"
-      class="mt-4 md:mt-0 ml-4 bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg shadow transition duration-200"
-    >
-      Adicionar Pagamento
-    </button>
+    <div class="flex flex-col sm:flex-row gap-3 mt-4 md:mt-0">
+      <button
+        (click)="openAddExpenseModal()"
+        class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow transition duration-200 flex items-center justify-center gap-2"
+      >
+        <mat-icon class="text-sm">add</mat-icon> Gasto
+      </button>
+      <button
+        (click)="openAddPaymentModal()"
+        class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg shadow transition duration-200 flex items-center justify-center gap-2"
+      >
+        <mat-icon class="text-sm">attach_money</mat-icon> Pagamento
+      </button>
+    </div>
   </div>
 
   <div class="mt-8">
@@ -34,320 +36,252 @@
       Resumo Financeiro
     </h3>
 
-    <div
-      class="bg-blue-100 dark:bg-gray-800 border border-blue-200 dark:border-blue-700 p-6 rounded-lg shadow-md mb-8"
-    >
+    <div class="bg-blue-100 dark:bg-gray-800 border border-blue-200 dark:border-blue-700 p-6 rounded-lg shadow-md mb-8">
       <p class="text-sm font-medium text-blue-700 dark:text-blue-400">
         Gasto Total do Grupo
       </p>
       <p class="text-3xl font-bold text-blue-900 dark:text-blue-200 mt-1">
-        {{ getAllExpenses() | currency:'BRL' }}
+        {{ totalSpend() | currency:'BRL' }}
       </p>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      
       <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
         <h4 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-100">
           Seu Balanço
         </h4>
-        @if (memberBalances().currentUserBalance; as myBalance) { @if
-        (myBalance.balance < 0) {
-        <p class="text-lg text-gray-600 dark:text-gray-300">Você deve:</p>
-        <p class="text-4xl font-bold text-red-500 dark:text-red-400 mb-4">
-          {{ -myBalance.balance | currency:'BRL' }}
-        </p>
-        <h5 class="font-semibold text-gray-700 dark:text-gray-200 mb-2">
-          Pague para (sugestões):
-        </h5>
-        <ul class="divide-y divide-gray-100 dark:divide-gray-700">
-          @for (creditor of memberBalances().creditors; track creditor.userId) {
-          @if(creditor.userId !== myBalance.userId) {
-          <li class="py-2 flex justify-between items-center">
-            <span class="text-gray-800 dark:text-gray-100">{{
-              creditor.name
-            }}</span>
-            <span class="font-medium text-green-600 dark:text-green-400"
-              >(recebe {{ creditor.balance | currency:'BRL' }})</span
-            >
-          </li>
-          } }
-        </ul>
-        } @else if (myBalance.balance > 0) {
-        <p class="text-lg text-gray-600 dark:text-gray-300">
-          Você tem a receber:
-        </p>
-        <p class="text-4xl font-bold text-green-600 dark:text-green-400 mb-4">
-          {{ myBalance.balance | currency:'BRL' }}
-        </p>
-        <h5 class="font-semibold text-gray-700 dark:text-gray-200 mb-2">
-          Devedores (quem te deve):
-        </h5>
-        <ul class="divide-y divide-gray-100 dark:divide-gray-700">
-          @for (debtor of memberBalances().debtors; track debtor.userId) {
-          @if(debtor.userId !== myBalance.userId) {
-          <li class="py-2 flex justify-between items-center">
-            <span class="text-gray-800 dark:text-gray-100">{{
-              debtor.name
-            }}</span>
-            <span class="font-medium text-red-600 dark:text-red-500"
-              >(deve {{ -debtor.balance | currency:'BRL' }})</span
-            >
-          </li>
-          } }
-        </ul>
+
+        @if (myBalance() < 0) {
+          <p class="text-lg text-gray-600 dark:text-gray-300">Você deve:</p>
+          <p class="text-4xl font-bold text-red-500 dark:text-red-400 mb-4">
+            {{ -myBalance() | currency:'BRL' }}
+          </p>
+          
+          <h5 class="font-semibold text-gray-700 dark:text-gray-200 mb-2 border-b pb-2">
+            Pagar para:
+          </h5>
+          <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+            @for (debt of iOweTo(); track debt.userId) {
+              <li class="py-2 flex justify-between items-center">
+                <span class="text-gray-800 dark:text-gray-100">{{ debt.name }}</span>
+                <span class="font-bold text-red-600 dark:text-red-400">
+                  {{ debt.amount | currency:'BRL' }}
+                </span>
+              </li>
+            }
+          </ul>
+
+        } @else if (myBalance() > 0) {
+          <p class="text-lg text-gray-600 dark:text-gray-300">Você tem a receber:</p>
+          <p class="text-4xl font-bold text-green-600 dark:text-green-400 mb-4">
+            {{ myBalance() | currency:'BRL' }}
+          </p>
+
+          <h5 class="font-semibold text-gray-700 dark:text-gray-200 mb-2 border-b pb-2">
+            Quem te deve:
+          </h5>
+          <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+            @for (debt of owedToMe(); track debt.userId) {
+              <li class="py-2 flex justify-between items-center">
+                <span class="text-gray-800 dark:text-gray-100">{{ debt.name }}</span>
+                <span class="font-bold text-green-600 dark:text-green-400">
+                  {{ debt.amount | currency:'BRL' }}
+                </span>
+              </li>
+            }
+          </ul>
+
         } @else {
-        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">
-          Você está quite! 🥳
-        </p>
-        <p class="text-gray-600 dark:text-gray-300 mt-2">
-          Seu balanço é R$ 0,00.
-        </p>
-        } }
+          <div class="flex flex-col items-center justify-center h-48">
+            <mat-icon class="text-6xl text-blue-500 mb-2 h-16 w-16">check_circle</mat-icon>
+            <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              Tudo certo!
+            </p>
+            <p class="text-gray-600 dark:text-gray-300 mt-2">
+              Você não deve nada e ninguém te deve.
+            </p>
+          </div>
+        }
       </div>
 
       <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg flex justify-center items-center flex-col">
-        <h4 class="text-xl font-bold mb-5 text-gray-800 dark:text-gray-100">
+        <h4 class="text-xl font-bold mb-5 text-gray-800 dark:text-gray-100 w-full text-left">
           Gastos por Categoria
         </h4>
-        <app-category-pie-chart [breakdown]="chartDataBreakdown()"/>
+        <div class="w-full h-64 flex items-center justify-center">
+             <app-category-pie-chart [breakdown]="chartDataBreakdown()"/>
+        </div>
       </div>
     </div>
   </div>
-  <div class="mt-10">
-    <h3 class="text-2xl font-semibold mb-4 text-gray-700 dark:text-gray-200">
-      Histórico de Gastos
-    </h3>
-    <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg">
-      <ul class="divide-y divide-gray-200 dark:divide-gray-700">
-        @for (expense of groupData.expenses; track expense.id) {
-        <li class="py-4 flex justify-between items-center">
-          <div class="flex items-center space-x-4">
-            <div
-              class="flex-shrink-0 bg-gray-100 dark:bg-gray-700 p-2 rounded-full"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="w-6 h-6 text-gray-500 dark:text-gray-400"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125V6.375c0-.621-.504-1.125-1.125-1.125H3.375Z"
-                />
-              </svg>
+
+  <div class="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-8">
+    
+    <div>
+      <h3 class="text-2xl font-semibold mb-4 text-gray-700 dark:text-gray-200">
+        Histórico de Gastos
+      </h3>
+      <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg max-h-[500px] overflow-y-auto custom-scrollbar">
+        <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+          @for (expense of getAllExpenses(); track expense.id) {
+          <li class="py-4 flex justify-between items-start hover:bg-gray-50 dark:hover:bg-gray-700/50 p-2 rounded transition">
+            <div class="flex items-start space-x-3">
+              <div class="flex-shrink-0 bg-blue-100 dark:bg-blue-900/30 p-2 rounded-full mt-1">
+                <mat-icon class="text-blue-600 dark:text-blue-400 text-sm">shopping_cart</mat-icon>
+              </div>
+              <div>
+                <p class="font-semibold text-gray-800 dark:text-gray-100">
+                  {{ expense.description }}
+                </p>
+                <div class="flex flex-col text-sm text-gray-500 dark:text-gray-400">
+                  <span>Pago por: <strong class="text-gray-700 dark:text-gray-300">{{ getUserData(expense.payerId)?.name || '...' }}</strong></span>
+                  @if(expense.category) {
+                  <span class="mt-1 inline-flex w-fit items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 capitalize">
+                    {{expense.category}}
+                  </span>
+                  }
+                </div>
+              </div>
             </div>
-            <div>
-              <p class="font-semibold text-gray-800 dark:text-gray-100">
-                {{ expense.description }}
-              </p>
-              <div class="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-                <span>Pago por: {{ getUserData(expense.payerId)?.name || '...' }}</span>
-                @if(expense.category) {
-                <span
-                  class="font-mono text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 px-2 py-0.5 rounded-full capitalize"
-                  >{{expense.category}}</span
-                >
+            <div class="flex flex-col items-end">
+                <p class="font-bold text-lg text-gray-800 dark:text-gray-200">
+                    {{ expense.value | currency:'BRL' }}
+                </p>
+                @if (expense.payerId === getUserId()) { 
+                    <button class="text-red-500 hover:text-red-700 mt-1" (click)="openDeleteExpenseModal(expense.id)" title="Excluir">
+                        <mat-icon class="text-sm scale-90">delete</mat-icon>
+                    </button> 
                 }
-              </div>
             </div>
+          </li>
+          } @empty {
+          <div class="text-center py-10">
+            <mat-icon class="text-gray-300 text-5xl">receipt_long</mat-icon>
+            <p class="text-gray-500 dark:text-gray-400 mt-2">Nenhum gasto registrado.</p>
           </div>
-          <p class="font-bold text-lg text-green-600 dark:text-green-400">
-            {{ expense.value | currency:'BRL' }}
-          </p>
-          @if (expense.payerId === getUserId()) { <mat-icon class="text-red-700 dark:text-red-300 hover:scale-110 cursor-pointer" (click)="openDeleteExpenseModal(expense.id)">delete</mat-icon> }
-        </li>
-        } @empty {
-        <p class="text-center text-gray-500 dark:text-gray-400 py-6">
-          Nenhum gasto registrado neste grupo ainda.
-        </p>
-        }
-      </ul>
+          }
+        </ul>
+      </div>
     </div>
-    <h3 class="text-2xl font-semibold mb-4 text-gray-700 dark:text-gray-200 mt-5">
-      Histórico de Pagamentos
-    </h3>
-    <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg">
-      <ul class="divide-y divide-gray-200 dark:divide-gray-700">
-        @for (payment of getAllPayments(); track payment.id) {
-        <li class="py-4 flex justify-between items-center">
-          <div class="flex items-center space-x-4">
-            <div
-              class="flex-shrink-0 bg-gray-100 dark:bg-gray-700 p-2 rounded-full"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="w-6 h-6 text-gray-500 dark:text-gray-400"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <div>
-              <p class="font-semibold text-gray-800 dark:text-gray-100">
-                Pagamento para {{
-                  getUserData(payment.targetId)?.name || 'Membro Desconhecido'
-                }}
-              </p>
-              <div class="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-                <span>Pago por: {{ getUserData(payment.payerId)?.name || '...' }}</span>
-                <span>{{ payment.date | date:'shortDate' }}</span>
+
+    <div>
+      <h3 class="text-2xl font-semibold mb-4 text-gray-700 dark:text-gray-200">
+        Histórico de Pagamentos
+      </h3>
+      <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg max-h-[500px] overflow-y-auto custom-scrollbar">
+        <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+          @for (payment of getAllPayments(); track payment.id) {
+          <li class="py-4 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-700/50 p-2 rounded transition">
+            <div class="flex items-center space-x-3">
+              <div class="flex-shrink-0 bg-green-100 dark:bg-green-900/30 p-2 rounded-full">
+                <mat-icon class="text-green-600 dark:text-green-400">payments</mat-icon>
+              </div>
+              <div>
+                <p class="font-medium text-gray-800 dark:text-gray-100">
+                  <span class="text-gray-500 text-sm">De:</span> {{ getUserData(payment.payerId)?.name || '...' }}
+                </p>
+                <p class="font-medium text-gray-800 dark:text-gray-100">
+                    <span class="text-gray-500 text-sm">Para:</span> {{ getUserData(payment.targetId)?.name || '...' }}
+                </p>
               </div>
             </div>
-          </div>
-          <p class="font-bold text-lg text-purple-600 dark:text-purple-400">
-            {{ payment.value | currency:'BRL' }}
-          </p>
-        </li>
-        } @empty {
-        <p class="text-center text-gray-500 dark:text-gray-400 py-6">
-          Nenhum pagamento registrado neste grupo ainda.
-        </p>
-        }
-      </ul>
+            <p class="font-bold text-lg text-green-600 dark:text-green-400">
+              {{ payment.value | currency:'BRL' }}
+            </p>
+          </li>
+          } @empty {
+            <div class="text-center py-10">
+                <mat-icon class="text-gray-300 text-5xl">attach_money</mat-icon>
+                <p class="text-gray-500 dark:text-gray-400 mt-2">Nenhum pagamento direto.</p>
+              </div>
+          }
+        </ul>
+      </div>
     </div>
   </div>
+
   } @else {
-  <p class="text-center text-red-500 dark:text-red-400">
-    Grupo não encontrado.
-  </p>
+  <div class="text-center mt-20">
+    <h2 class="text-2xl font-bold text-gray-700 dark:text-gray-300">Grupo não encontrado</h2>
+    <p class="text-gray-500">Verifique se o ID está correto ou se você tem permissão.</p>
+  </div>
   } }
 </div>
 
 @if (addingExpense()) {
 <div
   (click)="closeAddExpenseModal()"
-  class="fixed inset-0 bg-black bg-opacity-60 dark:bg-opacity-80 z-40 flex items-center justify-center p-4"
+  class="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-opacity"
 >
   <div
     (click)="$event.stopPropagation()"
-    class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-md relative animate-fade-in"
+    class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-md relative animate-fade-in"
   >
-    <h3 class="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100">
-      Adicionar Novo Gasto
-    </h3>
+    <div class="flex justify-between items-center mb-6">
+        <h3 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Novo Gasto</h3>
+        <button (click)="closeAddExpenseModal()" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+            <mat-icon>close</mat-icon>
+        </button>
+    </div>
 
     <form [formGroup]="expenseForm" (ngSubmit)="onSubmitExpense()">
       <div class="mb-4">
-        <label
-          for="description"
-          class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300"
-          >Descrição</label
-        >
+        <label class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300">Descrição</label>
         <input
           type="text"
-          id="description"
           formControlName="description"
-          class="shadow-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:placeholder-gray-500"
-          placeholder="Ex: Jantar, Supermercado"
+          class="w-full p-3 border rounded-lg bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none transition"
+          placeholder="Ex: Jantar, Uber"
         />
-        @if (expenseForm.get('description')?.invalid &&
-        expenseForm.get('description')?.touched) {
-        <p class="text-red-500 dark:text-red-400 text-xs mt-1">
-          A descrição é obrigatória.
-        </p>
+        @if (expenseForm.get('description')?.invalid && expenseForm.get('description')?.touched) {
+            <p class="text-red-500 text-xs mt-1">Obrigatório.</p>
         }
       </div>
+
       <div class="mb-4">
-        <label
-          for="amount"
-          class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300"
-          >Valor (R$)</label
-        >
+        <label class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300">Valor (R$)</label>
         <input
           type="number"
-          id="amount"
           formControlName="amount"
-          class="shadow-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:placeholder-gray-500"
+          class="w-full p-3 border rounded-lg bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none transition"
           placeholder="0,00"
         />
-        @if (expenseForm.get('amount')?.invalid &&
-        expenseForm.get('amount')?.touched) {
-        <p class="text-red-500 dark:text-red-400 text-xs mt-1">
-          O valor deve ser maior que 0.
-        </p>
-        }
       </div>
 
       <div class="mb-4">
-        <label
-          for="category"
-          class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300"
-          >Categoria</label
-        >
+        <label class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300">Categoria</label>
         <select
-          id="category"
           formControlName="category"
-          class="shadow-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="w-full p-3 border rounded-lg bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none transition"
         >
-          <option value="" disabled>Selecione uma categoria</option>
-
+          <option value="" disabled>Selecione...</option>
           @for (category of existingCategories(); track category) {
-          <option [value]="category" class="capitalize">{{ category }}</option>
+            <option [value]="category" class="capitalize">{{ category }}</option>
           }
-
-          <option value="new">Nova Categoria...</option>
+          <option value="new" class="font-bold text-blue-500">+ Nova Categoria</option>
         </select>
-        @if (expenseForm.get('category')?.invalid &&
-        expenseForm.get('category')?.touched) {
-        <p class="text-red-500 dark:text-red-400 text-xs mt-1">
-          Selecione uma categoria.
-        </p>
-        }
       </div>
 
       @if (expenseForm.get('category')?.value === 'new') {
-      <div class="mb-6 animate-fade-in">
-        <label
-          for="customCategory"
-          class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300"
-          >Nome da Nova Categoria</label
-        >
+      <div class="mb-6 animate-fade-in-down">
+        <label class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300">Nome da Nova Categoria</label>
         <input
           type="text"
-          id="customCategory"
           formControlName="customCategory"
-          class="shadow-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:placeholder-gray-500"
-          placeholder="Ex: Padaria, Viagem"
+          class="w-full p-3 border rounded-lg bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"
+          placeholder="Digite o nome..."
         />
-        @if (expenseForm.get('customCategory')?.invalid &&
-        expenseForm.get('customCategory')?.touched) {
-        <p class="text-red-500 dark:text-red-400 text-xs mt-1">
-          O nome da nova categoria é obrigatório.
-        </p>
-        }
       </div>
-      } @else {
-      <div class="mb-6"></div>
       }
 
-      <div class="space-y-3">
-        <button
-          type="submit"
-          [disabled]="expenseForm.invalid || addExpenseLoading()"
-          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg disabled:bg-gray-400 dark:disabled:bg-gray-600 transition duration-200"
-        >
-          @if (!addExpenseLoading()) { Salvar Gasto } @else {
-          <span class="animate-pulse">Salvando...</span>
-          }
+      <div class="flex gap-3 mt-6">
+        <button type="button" (click)="closeAddExpenseModal()" class="flex-1 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition">
+            Cancelar
         </button>
-
-        <button
-          type="button"
-          (click)="closeAddExpenseModal()"
-          class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 font-medium py-3 px-4 rounded-lg transition duration-200"
-        >
-          Cancelar
+        <button type="submit" [disabled]="expenseForm.invalid || addExpenseLoading()" class="flex-1 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex justify-center items-center">
+             @if(addExpenseLoading()){ <mat-icon class="animate-spin text-sm mr-2">refresh</mat-icon> }
+             Salvar
         </button>
       </div>
     </form>
@@ -356,111 +290,65 @@
 }
 
 @if (deletingExpense()) {
-  <div
-    (click)="closeDeleteExpenseModal()"
-    class="fixed inset-0 bg-black bg-opacity-60 dark:bg-opacity-80 z-40 flex items-center justify-center p-4"
-  >
-    <div
-      (click)="$event.stopPropagation()"
-      class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-md relative animate-fade-in"
-    >
-      <h3 class="text-2xl mb-6 text-gray-800 dark:text-gray-100">
-        Deseja deletar {{ expenseName(deletingExpenseId() || '') }}?
-      </h3>
-
-      <div class="space-y-3">
-        <button
-          (click)="confirmDeleteExpense()"
-          class="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-lg transition duration-200"
-        >
-          Confirmar Deleção
-        </button>
-
-        <button
-          (click)="closeDeleteExpenseModal()"
-          class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 py-3 px-4 rounded-lg transition duration-200"
-        >
-          Cancelar
-        </button>
+  <div (click)="closeDeleteExpenseModal()" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+    <div (click)="$event.stopPropagation()" class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-sm">
+      <div class="text-center mb-6">
+          <mat-icon class="text-5xl text-red-500 mb-2 h-12 w-12">warning</mat-icon>
+          <h3 class="text-xl font-bold text-gray-800 dark:text-gray-100">Excluir Gasto?</h3>
+          <p class="text-gray-500 mt-2">Você está prestes a excluir "{{ expenseName(deletingExpenseId() || '') }}". Isso não pode ser desfeito.</p>
+      </div>
+      <div class="flex gap-3">
+        <button (click)="closeDeleteExpenseModal()" class="flex-1 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-medium">Cancelar</button>
+        <button (click)="confirmDeleteExpense()" class="flex-1 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700">Excluir</button>
       </div>
     </div>
   </div>
 }
 
 @if (addingPayment()) {
-  <div
-    (click)="closeAddPaymentModal()"
-    class="fixed inset-0 bg-black bg-opacity-60 dark:bg-opacity-80 z-40 flex items-center justify-center p-4"
-  >
-    <div
-      (click)="$event.stopPropagation()"
-      class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-md relative animate-fade-in"
-    >
-      <h3 class="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100">
-        Adicionar Novo Pagamento
-      </h3>
+  <div (click)="closeAddPaymentModal()" class="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div (click)="$event.stopPropagation()" class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-md relative">
+        
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Novo Pagamento</h3>
+            <button (click)="closeAddPaymentModal()" class="text-gray-500 hover:text-gray-700"><mat-icon>close</mat-icon></button>
+        </div>
 
       <form [formGroup]="paymentForm" (ngSubmit)="onSubmitPayment()">
-        <label
-          for="value"
-          class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300"
-          >Valor do Pagamento (R$)</label
-        >
-        <input
-          type="number"
-          id="value"
-          formControlName="value"
-          class="shadow-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:placeholder-gray-500 mb-4"
-          placeholder="0,00"
-        />
-        @if (paymentForm.get('value')?.invalid &&
-        paymentForm.get('value')?.touched) {
-        <p class="text-red-500 dark:text-red-400 text-xs mb-4">
-          O valor do pagamento deve ser maior que 0.
-        </p>
-        }
-        <label
-          for="targetId"
-          class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300"
-          >Membro que Receberá o Pagamento</label
-        >
-        <select
-          id="targetId"
-          formControlName="targetId"
-          class="shadow-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-6"
-        >
-          <option value="" disabled>Selecione um membro</option>
-          @for (member of group()!.memberIds; track member) {
-          @if (member !== getUserId()) {
-          <option [value]="member">{{
-            getUserData(member)?.name || 'Membro Desconhecido'
-          }}</option>
-          } }
-        </select>
-        @if (paymentForm.get('targetMember')?.invalid &&
-        paymentForm.get('targetMember')?.touched) {
-        <p class="text-red-500 dark:text-red-400 text-xs mb-6">
-          Selecione um membro para o pagamento.
-        </p>
-        }
-        <div class="space-y-3">
-          <button
-            type="submit"
-            [disabled]="paymentForm.invalid || addPaymentLoading()"
-            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg disabled:bg-gray-400 dark:disabled:bg-gray-600 transition duration-200"
-          >
-            @if (!addPaymentLoading()) { Salvar Pagamento } @else {
-            <span class="animate-pulse">Salvando...</span>
+        <div class="mb-4">
+            <label class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300">Valor (R$)</label>
+            <input
+            type="number"
+            formControlName="value"
+            class="w-full p-3 border rounded-lg bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 outline-none"
+            placeholder="0,00"
+            />
+        </div>
+        
+        <div class="mb-6">
+            <label class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300">Enviar para</label>
+            <select
+            formControlName="targetId"
+            class="w-full p-3 border rounded-lg bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 outline-none"
+            >
+            <option value="" disabled>Selecione um membro...</option>
+            @for (member of group()!.memberIds; track member) {
+                @if (member !== getUserId()) {
+                <option [value]="member">{{ getUserData(member)?.name || 'Carregando...' }}</option>
+                } 
             }
-          </button>
+            </select>
+            @if (paymentForm.get('targetId')?.invalid && paymentForm.get('targetId')?.touched) {
+                <p class="text-red-500 text-xs mt-1">Selecione quem vai receber.</p>
+            }
+        </div>
 
-          <button
-            type="button"
-            (click)="closeAddPaymentModal()"
-            class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 font-medium py-3 px-4 rounded-lg transition duration-200"
-          >
-            Cancelar
-          </button>
+        <div class="flex gap-3">
+            <button type="button" (click)="closeAddPaymentModal()" class="flex-1 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-300">Cancelar</button>
+            <button type="submit" [disabled]="paymentForm.invalid || addPaymentLoading()" class="flex-1 py-3 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700 disabled:opacity-50 flex justify-center items-center">
+                @if(addPaymentLoading()){ <mat-icon class="animate-spin text-sm mr-2">refresh</mat-icon> }
+                Confirmar
+            </button>
         </div>
       </form>
     </div>

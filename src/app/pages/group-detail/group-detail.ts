@@ -4,13 +4,18 @@ import { ActivatedRoute } from '@angular/router';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 
+// Models e Services
 import { Group } from '../../models/group.model';
 import { User } from '../../models/user.model';
-import { Payment } from '../../models/payment.model';
 import { GroupsService } from '../../Services/group/group';
 import { AuthService } from '../../Services/auth/auth';
 import { UsersService } from '../../Services/user/user';
+// Importação do novo Service
+import { AnalyticsService, GroupAnalysis } from '../../Services/analysis/analytics.service';
+
 import { CategoryPieChartComponent } from '../../components/pie-chart/pie-chart';
+import { Payment } from '../../models/payment.model';
+import { Expense } from '../../models/expense.model';
 
 @Component({
   selector: 'app-group-detail',
@@ -20,29 +25,32 @@ import { CategoryPieChartComponent } from '../../components/pie-chart/pie-chart'
 })
 export class GroupDetail implements OnInit {
   
-  // --- Services ---
+  // --- Injeções ---
   private route = inject(ActivatedRoute);
   private groupsService = inject(GroupsService);
   private authService = inject(AuthService);
   private usersService = inject(UsersService);
+  private analyticsService = inject(AnalyticsService); // <--- Injeção do Analytics
   private fb = inject(NonNullableFormBuilder);
 
-  // --- State & Cache ---
+  // --- Estado ---
   private usersCache = new Map<string, User | null>();
   
+  // Dados principais
   group = signal<Group | undefined>(undefined);
+  analysis = signal<GroupAnalysis | null>(null); // <--- Dados vindos do microsserviço
+  
   loading = signal<boolean>(true);
   
-  // UI State - Modals
+  // Controle de UI (Modais)
   addingExpense = signal<boolean>(false);
   addExpenseLoading = signal<boolean>(false);
   deletingExpense = signal<boolean>(false);
   deletingExpenseId = signal<string | null>(null);
-  
   addingPayment = signal<boolean>(false);
   addPaymentLoading = signal<boolean>(false);
 
-  // --- Forms ---
+  // --- Formulários ---
   expenseForm = this.fb.group({
     description: ['', [Validators.required]],
     amount: [0, [Validators.required, Validators.min(0.01)]],
@@ -55,121 +63,73 @@ export class GroupDetail implements OnInit {
     targetId: ['', [Validators.required]],
   });
 
-  // --- Computed Properties ---
+  // --- Computed Properties (Baseados na API) ---
 
-  // Retorna categorias únicas existentes no grupo para autocomplete
+  // Categorias existentes (para autocomplete) - Mantido local pois é simples
   existingCategories = computed(() => {
     const expenses = this.group()?.expenses || [];
     const categories = expenses.map(ex => ex.category.toLowerCase());
     return [...new Set(categories.filter(c => c))];
   });
 
-  totalSpendInCents = computed(() => {
-    const expenses = this.group()?.expenses || [];
-    return expenses.reduce((sum, expense) => sum + this.toCents(expense.value), 0);
+  // Total gasto (Vem direto do backend agora)
+  totalSpend = computed(() => {
+    return this.analysis()?.totalSpent || 0;
   });
 
-  // Lógica principal de divisão de contas e saldo
-  memberBalances = computed(() => {
-    const groupData = this.group();
-    const totalGroupSpendInCents = this.totalSpendInCents();
+  // Meu Saldo Líquido (Vem direto do backend)
+  myBalance = computed(() => {
+    return this.analysis()?.myBalance || 0;
+  });
 
-    if (!groupData || !groupData.memberIds.length || totalGroupSpendInCents === 0) {
-      return { balances: [], creditors: [], debtors: [], currentUserBalance: null };
-    }
-
-    // 1. Calcular a parte justa (Fair Share)
-    const memberCount = groupData.memberIds.length;
-    const baseShareInCents = Math.floor(totalGroupSpendInCents / memberCount);
-    let remainderCents = totalGroupSpendInCents % memberCount;
-
-    // 2. Calcular quanto cada membro já pagou
-    const totalSpentByMember = new Map<string, number>();
-    groupData.memberIds.forEach(id => totalSpentByMember.set(id, 0));
-
-    groupData.expenses?.forEach(expense => {
-      const currentSpend = totalSpentByMember.get(expense.payerId) || 0;
-      totalSpentByMember.set(expense.payerId, currentSpend + this.toCents(expense.value));
-    });
-
-    // 3. Gerar balanços individuais (Pago - Parte Justa)
-    const sortedMemberIds = [...groupData.memberIds].sort();
+  // Quem deve a mim (Calculado pelo algoritmo Greedy do Backend)
+  owedToMe = computed(() => {
+    const data = this.analysis();
+    if (!data || !data.owedBy) return [];
     
-    const balancesInCents = sortedMemberIds.map(userId => {
-      const totalSpent = totalSpentByMember.get(userId) || 0;
-      let memberShare = baseShareInCents;
-
-      // Distribui os centavos restantes para os primeiros da lista (arbitrário mas consistente)
-      if (remainderCents > 0) {
-        memberShare += 1;
-        remainderCents -= 1;
-      }
-
-      let balance = totalSpent - memberShare;
-
-      // Ajusta com pagamentos diretos já realizados
-      if (groupData.payments) {
-        Object.values(groupData.payments).forEach((payment: Payment) => {
-          if (payment.payerId === userId) {
-            balance += this.toCents(payment.value); // Eu paguei, meu saldo aumenta
-          } else if (payment.targetId === userId) {
-            balance -= this.toCents(payment.value); // Eu recebi, meu saldo diminui
-          }
-        });
-      }
-
-      return {
-        userId,
-        name: this.getUserData(userId)?.name || 'Usuário desconhecido',
-        balanceInCents: balance
-      };
-    });
-
-    // 4. Formatar para exibição
-    const balances = balancesInCents.map(b => ({
-      ...b,
-      balance: b.balanceInCents / 100.0
+    return data.owedBy.map(debt => ({
+      userId: debt.userId,
+      name: this.getUserData(debt.userId)?.name || 'Desconhecido',
+      amount: debt.amount
     }));
+  });
+
+  // A quem eu devo (Calculado pelo algoritmo Greedy do Backend)
+  iOweTo = computed(() => {
+    const data = this.analysis();
+    if (!data || !data.oweTo) return [];
+
+    return data.oweTo.map(debt => ({
+      userId: debt.userId,
+      name: this.getUserData(debt.userId)?.name || 'Desconhecido',
+      amount: debt.amount
+    }));
+  });
+
+  // Breakdown de Categorias (Vem pronto do backend)
+  chartDataBreakdown = computed(() => {
+    const summary = this.analysis()?.categorySummary;
+    if (!summary) return { labels: [], data: [] };
 
     return {
-      balances,
-      creditors: balances.filter(b => b.balance > 0).sort((a, b) => b.balance - a.balance),
-      debtors: balances.filter(b => b.balance < 0).sort((a, b) => a.balance - b.balance),
-      currentUserBalance: balances.find(b => b.userId === this.authService.currentUser()?.uid) || null
+      labels: Object.keys(summary),
+      data: Object.values(summary)
     };
   });
 
-  // Dados para gráficos e relatórios
-  categorySpending = computed(() => {
-    const expenses = this.group()?.expenses || [];
-    const totalSpendCents = this.totalSpendInCents();
+  // Lista formatada para exibição de lista (opcional)
+  categoryList = computed(() => {
+    const summary = this.analysis()?.categorySummary;
+    if (!summary) return [];
+    const total = this.totalSpend();
 
-    if (totalSpendCents === 0) return [];
-
-    const categoryMap = new Map<string, number>();
-    expenses.forEach(expense => {
-      const category = expense.category || 'sem categoria';
-      const currentTotalCents = categoryMap.get(category) || 0;
-      categoryMap.set(category, currentTotalCents + this.toCents(expense.value));
-    });
-
-    return Array.from(categoryMap.entries())
-      .map(([category, totalCents]) => ({
-        category,
-        total: totalCents / 100.0,
-        percentage: (totalCents / totalSpendCents) * 100
+    return Object.entries(summary)
+      .map(([cat, val]) => ({
+        category: cat,
+        total: val,
+        percentage: total > 0 ? (val / total) * 100 : 0
       }))
       .sort((a, b) => b.total - a.total);
-  });
-
-  chartDataBreakdown = computed(() => {
-    const spending = this.categorySpending();
-    if (!spending?.length) return { labels: [], data: [] };
-    
-    return {
-      labels: spending.map(s => s.category),
-      data: spending.map(s => s.total)
-    };
   });
 
   // --- Lifecycle ---
@@ -184,30 +144,54 @@ export class GroupDetail implements OnInit {
       return;
     }
 
-    await this.loadGroupData(groupId);
+    // Carrega dados iniciais
+    await this.refreshAllData(groupId);
     this.setupExpenseFormListeners();
     this.loading.set(false);
   }
 
+  // --- Método Central de Carregamento ---
+
+  private async refreshAllData(groupId: string) {
+    // 1. Carrega detalhes do grupo (Firebase)
+    // Precisamos disso para ter a lista de membros e nomes
+    const groupFromService = await this.groupsService.getGroupByIdAsync(groupId);
+
+    if (groupFromService) {
+      const processedGroup: Group = {
+        ...groupFromService,
+        expenses: groupFromService.expenses ? Object.values(groupFromService.expenses) : []
+      };
+      
+      // Cache de Usuários (para exibir nomes nas dívidas)
+      await Promise.all(processedGroup.memberIds.map(async (id) => {
+        if (!this.usersCache.has(id)) {
+          const user = await this.usersService.getUserById(id);
+          this.usersCache.set(id, user);
+        }
+      }));
+      
+      this.group.set(processedGroup);
+
+      // 2. Carrega Análise Financeira (Microsserviço Go)
+      try {
+        const analysisData = await this.analyticsService.getGroupAnalysis(groupId);
+        this.analysis.set(analysisData);
+      } catch (error) {
+        console.error('Erro ao carregar análise do grupo:', error);
+      }
+    }
+  }
+
   // --- Actions: Expenses ---
 
-  openAddExpenseModal(): void {
+  openAddExpenseModal() {
     this.expenseForm.reset({ description: '', amount: 0, category: '', customCategory: '' });
     this.addingExpense.set(true);
   }
 
-  closeAddExpenseModal(): void {
+  closeAddExpenseModal() {
     this.addingExpense.set(false);
-  }
-
-  openDeleteExpenseModal(expenseId: string): void {
-    this.deletingExpenseId.set(expenseId);
-    this.deletingExpense.set(true);
-  }
-
-  closeDeleteExpenseModal(): void {
-    this.deletingExpenseId.set(null);
-    this.deletingExpense.set(false);
   }
 
   async onSubmitExpense() {
@@ -220,24 +204,22 @@ export class GroupDetail implements OnInit {
     const formValue = this.expenseForm.getRawValue();
     const currentGroupId = this.group()?.id;
 
-    if (!currentGroupId) {
-      this.addExpenseLoading.set(false);
-      return;
-    }
+    if (!currentGroupId) return;
 
     const finalCategory = (formValue.category === 'new' ? formValue.customCategory : formValue.category).toLowerCase();
 
     try {
-      const newExpense = await this.groupsService.createExpense({
+      await this.groupsService.createExpense({
         groupId: currentGroupId,
         description: formValue.description,
         value: formValue.amount,
         category: finalCategory
       });
-
-      // Optimistic Update
-      this.group.update(g => g ? { ...g, expenses: [...(g.expenses || []), newExpense] } : g);
+      
       this.closeAddExpenseModal();
+      // Recarrega tudo para pegar a nova análise atualizada do backend
+      await this.refreshAllData(currentGroupId);
+
     } catch (error) {
       console.error('Erro ao criar despesa', error);
     } finally {
@@ -245,33 +227,36 @@ export class GroupDetail implements OnInit {
     }
   }
 
-  confirmDeleteExpense(): void {
-    const expenseId = this.deletingExpenseId();
-    if (expenseId) {
-      this.deleteExpense(expenseId).then(() => this.closeDeleteExpenseModal());
-    }
+  openDeleteExpenseModal(expenseId: string) {
+    this.deletingExpenseId.set(expenseId);
+    this.deletingExpense.set(true);
   }
 
-  async deleteExpense(expenseId: string) {
-    const currentGroupId = this.group()?.id;
-    if (!currentGroupId) return;
+  closeDeleteExpenseModal() {
+    this.deletingExpenseId.set(null);
+    this.deletingExpense.set(false);
+  }
 
-    await this.groupsService.deleteExpense(currentGroupId, expenseId);
+  confirmDeleteExpense() {
+    const expenseId = this.deletingExpenseId();
+    const groupId = this.group()?.id;
     
-    this.group.update(g => g ? {
-      ...g,
-      expenses: g.expenses?.filter(exp => exp.id !== expenseId) || []
-    } : g);
+    if (expenseId && groupId) {
+      this.groupsService.deleteExpense(groupId, expenseId).then(() => {
+        this.closeDeleteExpenseModal();
+        this.refreshAllData(groupId); // Atualiza análise
+      });
+    }
   }
 
   // --- Actions: Payments ---
 
-  openAddPaymentModal(): void {
+  openAddPaymentModal() {
     this.paymentForm.reset({ value: 0, targetId: '' });
     this.addingPayment.set(true);
   }
 
-  closeAddPaymentModal(): void {
+  closeAddPaymentModal() {
     this.addingPayment.set(false);
   }
 
@@ -285,26 +270,17 @@ export class GroupDetail implements OnInit {
     const { value, targetId } = this.paymentForm.getRawValue();
     const currentGroupId = this.group()?.id;
 
-    if (!currentGroupId) {
-      this.addPaymentLoading.set(false);
-      return;
-    }
+    if (!currentGroupId) return;
 
     try {
-      const newPayment = await this.groupsService.createPayment({
+      await this.groupsService.createPayment({
         groupId: currentGroupId,
         value: value,
         targetId: targetId
       });
 
-      // Normalização de pagamentos (array vs object do Firebase)
-      this.group.update(g => {
-        if (!g) return g;
-        const currentPayments = g.payments ? (Array.isArray(g.payments) ? g.payments : Object.values(g.payments)) : [];
-        return { ...g, payments: [...currentPayments, newPayment] } as Group;
-      });
-
       this.closeAddPaymentModal();
+      await this.refreshAllData(currentGroupId); // Atualiza análise (recalcula dívidas)
     } catch (error) {
       console.error('Erro ao processar pagamento', error);
     } finally {
@@ -312,20 +288,23 @@ export class GroupDetail implements OnInit {
     }
   }
 
-  // --- Helpers & UI Accessors ---
+  // --- Helpers ---
 
-  getAllExpenses(): number {
-    return this.totalSpendInCents() / 100.0;
+  getAllExpenses(): Expense[] {
+    // Normalização para lista, caso precise iterar no template
+    const g = this.group();
+    if (!g?.expenses) return [];
+    return Array.isArray(g.expenses) ? g.expenses : Object.values(g.expenses);
   }
 
-  getAllPayments = (): Payment[] => {
+  getAllPayments(): Payment[] {
     const g = this.group();
     if (!g?.payments) return [];
     return Array.isArray(g.payments) ? g.payments : Object.values(g.payments);
-  };
+  }
 
   expenseName(expenseId: string): string {
-    return this.group()?.expenses?.find(exp => exp.id === expenseId)?.description || 'Gasto desconhecido';
+    return this.getAllExpenses().find(exp => exp.id === expenseId)?.description || 'Desconhecido';
   }
 
   getUserData(userId: string): User | null | undefined {
@@ -336,43 +315,15 @@ export class GroupDetail implements OnInit {
     return this.authService.currentUser()?.uid || null;
   }
 
-  // --- Private Logic ---
-
-  private async loadGroupData(groupId: string) {
-    const groupFromService = await this.groupsService.getGroupByIdAsync(groupId);
-
-    if (groupFromService) {
-      // Normalização de dados
-      const processedGroup: Group = {
-        ...groupFromService,
-        expenses: groupFromService.expenses ? Object.values(groupFromService.expenses) : []
-      };
-      
-      // Carregamento de usuários em paralelo
-      await Promise.all(processedGroup.memberIds.map(async (id) => {
-        if (!this.usersCache.has(id)) {
-          const user = await this.usersService.getUserById(id);
-          this.usersCache.set(id, user);
-        }
-      }));
-      
-      this.group.set(processedGroup);
-    }
-  }
-
-  private setupExpenseFormListeners(): void {
+  private setupExpenseFormListeners() {
     this.expenseForm.get('category')?.valueChanges.subscribe(value => {
-      const customCategoryControl = this.expenseForm.get('customCategory');
+      const customCtrl = this.expenseForm.get('customCategory');
       if (value === 'new') {
-        customCategoryControl?.setValidators([Validators.required]);
+        customCtrl?.setValidators([Validators.required]);
       } else {
-        customCategoryControl?.clearValidators();
+        customCtrl?.clearValidators();
       }
-      customCategoryControl?.updateValueAndValidity();
+      customCtrl?.updateValueAndValidity();
     });
-  }
-
-  private toCents(value: number): number {
-    return Math.round(value * 100);
   }
 }
