@@ -3,12 +3,12 @@ import { Component, computed, Signal, signal, effect, inject } from '@angular/co
 import { Router, RouterModule } from '@angular/router';
 import { User } from '../../models/user.model';
 import { Group } from '../../models/group.model';
-import { Payment } from '../../models/payment.model';
 import { GroupsService } from '../../Services/group/group';
 import { AuthService } from '../../Services/auth/auth';
 import { UsersService } from '../../Services/user/user';
 import { CategoryPieChartComponent } from '../../components/pie-chart/pie-chart';
 import { ReactiveFormsModule, NonNullableFormBuilder, Validators } from '@angular/forms';
+import { AnalyticsService, GeneralAnalysis } from '../../Services/analysis/analysis';
 
 @Component({
   selector: 'app-home',
@@ -17,25 +17,30 @@ import { ReactiveFormsModule, NonNullableFormBuilder, Validators } from '@angula
   templateUrl: './home.html'
 })
 export class Home {
+  // Serviços
+  private groupService = inject(GroupsService);
+  private authService = inject(AuthService);
+  private usersService = inject(UsersService);
+  private analyticsService = inject(AnalyticsService);
+  private router = inject(Router);
+  private fb = inject(NonNullableFormBuilder);
 
+  // Sinais de Estado UI
   isJoiningGroup = signal(false);
   addingExpense = signal(false);
   addExpenseLoading = signal(false);
   
-  private allUsers = signal<User[]>([]);
-
-  private groupService = inject(GroupsService);
-  private authService = inject(AuthService);
-  private usersService = inject(UsersService);
-  private router = inject(Router);
-
+  // Sinais de Dados
   loading = this.groupService.loading;
   currentUser = this.authService.currentUser;
   groups = this.groupService.groups;
+  
+  // Sinal para armazenar a análise vinda do Backend
+  analysisData = signal<GeneralAnalysis | null>(null);
+
+  private allUsers = signal<User[]>([]);
 
   // Form de adicionar gasto
-  private fb = inject(NonNullableFormBuilder);
-
   addExpenseForm = this.fb.group({
     description: ['', [Validators.required]],
     value: [0, [Validators.required]],
@@ -44,7 +49,7 @@ export class Home {
   });
 
   constructor() {
-
+    // Effect 1: Carregar Grupos ao logar
     effect(() => {
       const user = this.currentUser();   
       if (user && user.uid) {
@@ -52,6 +57,22 @@ export class Home {
       }
     });
 
+    // Effect 2: Carregar Análise Financeira
+    effect(async () => {
+       const user = this.currentUser();
+       const groups = this.groups(); 
+       
+       if (user && groups) {
+         try {
+           const analysis = await this.analyticsService.getGeneralAnalysis();
+           this.analysisData.set(analysis);
+         } catch (err) {
+           console.error('Erro ao carregar análise:', err);
+         }
+       }
+    });
+
+    // Effect 3: Carregar detalhes dos usuários (para exibir nomes na lista recente)
     effect(async () => {
       const groups = this.groups();
       if (!groups || groups.length === 0) {
@@ -70,13 +91,28 @@ export class Home {
     });
   }
 
-  private toCents(value: number | string): number {
-    const num = typeof value === 'string' ? parseFloat(value) : value;
-    if (isNaN(num)) {
-      return 0;
-    }
-    return Math.round(num * 100);
-  }
+  netBalance = computed(() => {
+    return this.analysisData()?.totalBalance || 0;
+  });
+
+  owedToUser = computed(() => {
+    return this.analysisData()?.totalOwedToMe || 0;
+  });
+
+  userOwes = computed(() => {
+    return this.analysisData()?.totalOwedByMe || 0;
+  });
+
+  categoryBreakdown = computed(() => {
+    const analysis = this.analysisData();
+    if (!analysis || !analysis.categorySummary) return { labels: [], data: [] };
+
+    const summary = analysis.categorySummary;
+    const labels = Object.keys(summary);
+    const data = Object.values(summary);
+
+    return { labels, data };
+  });
 
   private allExpenses = computed(() => {
     const usersMap = new Map(this.allUsers().map(u => [u.uid, u.name]));
@@ -88,140 +124,6 @@ export class Home {
         payerName: usersMap.get(expense.payerId) || 'Usuário Desconhecido'
       })) : []
     );
-  });
-
-  private financialSummaryInCents = computed(() => {
-    const myId = this.currentUser()?.uid; 
-    const groups = this.groups();
-
-    if (!myId || !groups || groups.length === 0) {
-      return {
-        totalUserPaidInCents: 0,
-        totalUserShareInCents: 0,
-        totalUserPaymentsSentInCents: 0,
-        totalUserPaymentsReceivedInCents: 0
-      };
-    }
-
-    let totalUserPaidInCents = 0;
-    let totalUserShareInCents = 0;
-    let totalUserPaymentsSentInCents = 0;
-    let totalUserPaymentsReceivedInCents = 0;
-
-    for (const group of groups) {
-      const memberIds = group.memberIds ? group.memberIds : [];
-      const memberCount = memberIds.length;
-
-      if (memberCount === 0 || !memberIds.includes(myId)) {
-        continue;
-      }
-
-      const expenses = group.expenses ? Object.values(group.expenses) : [];
-      const payments = group.payments ? Object.values(group.payments) : [];
-
-      let totalGroupSpendInCents = 0;
-      expenses.forEach(expense => {
-        const expenseInCents = this.toCents(expense.value);
-        totalGroupSpendInCents += expenseInCents;
-        
-        if (expense.payerId === myId) {
-          totalUserPaidInCents += expenseInCents;
-        }
-      });
-
-      if (totalGroupSpendInCents > 0) {
-        const baseShareInCents = Math.floor(totalGroupSpendInCents / memberCount);
-        const remainderCents = totalGroupSpendInCents % memberCount;
-
-        const sortedMemberIds = [...memberIds].sort();
-        const myIndex = sortedMemberIds.indexOf(myId);
-
-        let myShareInCents = baseShareInCents;
-        if (myIndex < remainderCents) {
-          myShareInCents += 1;
-        }
-        totalUserShareInCents += myShareInCents;
-      }
-
-      payments.forEach(payment => {
-        const paymentInCents = this.toCents(payment.value);
-        if (payment.payerId === myId) {
-          totalUserPaymentsSentInCents += paymentInCents;
-        } else if (payment.targetId === myId) {
-          totalUserPaymentsReceivedInCents += paymentInCents;
-        }
-      });
-    }
-
-    return { 
-      totalUserPaidInCents, 
-      totalUserShareInCents, 
-      totalUserPaymentsSentInCents, 
-      totalUserPaymentsReceivedInCents 
-    };
-  });
-
-    
-
-  private financialSummary = computed(() => {
-    const myId = this.currentUser()?.uid; 
-    const groups = this.groups();
-
-    if (!myId || !groups || groups.length === 0) {
-      return { totalUserPaid: 0, totalUserShare: 0 };
-    }
-
-    let totalUserPaid = 0;
-    let totalUserShare = 0;
-
-    for (const group of groups) {
-      const numMembers = group.memberIds ? group.memberIds.length : 0;
-      
-      if (numMembers === 0) {
-        continue;
-      }
-
-      if (group.expenses) {
-        const expensesArray = Object.values(group.expenses);
-
-        for (const expense of expensesArray) {
-            const expenseValue = Number(expense.value) || 0; 
-
-            const share = expenseValue / numMembers;
-            totalUserShare += share;
-            
-            if (expense.payerId === myId) {
-              totalUserPaid += expenseValue;
-            }
-        }
-      }
-    }
-    
-    return { totalUserPaid, totalUserShare };
-  });
-
-  owedToUser = computed(() => {
-    return Math.max(0, this.netBalance());
-  });
-
-  userOwes = computed(() => {
-    return Math.max(0, -this.netBalance());
-  });
-
-  netBalance = computed(() => {
-    const { 
-      totalUserPaidInCents, 
-      totalUserShareInCents, 
-      totalUserPaymentsSentInCents, 
-      totalUserPaymentsReceivedInCents 
-    } = this.financialSummaryInCents();
-
-    const totalCreditsInCents = totalUserPaidInCents + totalUserPaymentsSentInCents;
-    const totalDebitsInCents = totalUserShareInCents + totalUserPaymentsReceivedInCents;
-
-    const netBalanceInCents = totalCreditsInCents - totalDebitsInCents;
-
-    return netBalanceInCents / 100.0;
   });
 
   recentExpenses = computed(() => {
@@ -237,11 +139,14 @@ export class Home {
     return this.groups()
       ?.map((group: Group) => {
         let lastActivityTime = 0;
-        if (group.expenses && group.expenses.length > 0) {
-          lastActivityTime = Math.max(
-            0, 
-            ...Object.values(group.expenses).map(e => new Date(e.date).getTime())
-          );
+        if (group.expenses) {
+          const expensesList = Object.values(group.expenses);
+          if (expensesList.length > 0) {
+             lastActivityTime = Math.max(
+              0, 
+              ...expensesList.map(e => new Date(e.date).getTime())
+            );
+          }
         }
         return { ...group, lastActivityTime };
       })
@@ -249,23 +154,7 @@ export class Home {
       .slice(0, 3);
   });
 
-  categoryBreakdown = computed(() => {
-    const expenses = this.allExpenses();
-    if (!expenses) return { labels: [], data: [] };
-
-    const totalsInCents = new Map<string, number>();
-
-    for (const exp of expenses) {
-      const cat = exp.category || 'Sem categoria';
-      const valInCents = this.toCents(exp.value); // Usa o helper
-      totalsInCents.set(cat, (totalsInCents.get(cat) || 0) + valInCents);
-    }
-
-    const labels = Array.from(totalsInCents.keys());
-    const data = Array.from(totalsInCents.values()).map(cents => cents / 100.0);
-
-    return { labels, data };
-  });
+  // --- Ações do Usuário (Modais e Navegação) ---
 
   openAddExpenseModal() {
     this.addingExpense.set(true);
@@ -274,19 +163,14 @@ export class Home {
   async promptToJoinGroup() {
     const groupId = prompt("Digite o ID (código) do grupo que deseja entrar:");
     
-    if (!groupId || groupId.trim() === '') {
-      return;
-    }
+    if (!groupId || groupId.trim() === '') return;
 
     this.isJoiningGroup.set(true);
     try {
       await this.groupService.joinGroup(groupId.trim());
-      
       alert(`Sucesso! Você agora está no grupo!`);
-    
     } catch (error: any) {
       console.error("Erro ao entrar no grupo:", error);
-
       if (error.message.includes('Grupo não encontrado')) {
         alert('Erro: Grupo não encontrado. Verifique o ID e tente novamente.');
       } else {
@@ -309,14 +193,19 @@ export class Home {
     if (this.addExpenseForm.valid) {
       this.addExpenseLoading.set(true);
       const expenseData = this.addExpenseForm.getRawValue();
+      
       this.groupService.createExpense({
         description: expenseData.description,
         value: expenseData.value,
         category: expenseData.category,
         groupId: expenseData.groupId
-      }).then(() => {
+      }).then(async () => {
         this.addExpenseLoading.set(false);
         this.closeAddExpenseModal();
+        
+        const analysis = await this.analyticsService.getGeneralAnalysis();
+        this.analysisData.set(analysis);
+
       }).catch(error => {
         console.error("Erro ao adicionar despesa:", error);
         alert('Ocorreu um erro ao adicionar a despesa. Tente novamente.');
