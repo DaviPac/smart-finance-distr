@@ -6,7 +6,7 @@ import { Group } from '../../models/group.model';
 import { GroupsService } from '../../Services/group/group';
 import { AuthService } from '../../Services/auth/auth';
 import { UsersService } from '../../Services/user/user';
-import { AnalyticsService, GeneralAnalysis } from '../../Services/analysis/analytics.service'; // Importe o novo service
+import { AnalyticsService, GeneralAnalysis } from '../../Services/analysis/analytics.service';
 import { CategoryPieChartComponent } from '../../components/pie-chart/pie-chart';
 import { ReactiveFormsModule, NonNullableFormBuilder, Validators } from '@angular/forms';
 
@@ -21,7 +21,7 @@ export class Home {
   private groupService = inject(GroupsService);
   private authService = inject(AuthService);
   private usersService = inject(UsersService);
-  private analyticsService = inject(AnalyticsService); // Injeção do Analytics
+  private analyticsService = inject(AnalyticsService);
   private router = inject(Router);
   private fb = inject(NonNullableFormBuilder);
 
@@ -58,10 +58,8 @@ export class Home {
     });
 
     // Effect 2: Carregar Análise Financeira (NOVO)
-    // Sempre que os grupos mudarem (adicionou gasto, entrou em grupo), recarregamos a análise
     effect(async () => {
        const user = this.currentUser();
-       // Usamos groups() como dependência para recarregar se houver mudanças locais
        const groups = this.groups(); 
        
        if (user && groups) {
@@ -86,7 +84,6 @@ export class Home {
       const payerIds = new Set(groups.flatMap(g => g.expenses ? Object.values(g.expenses).map(e => e.payerId) : []));
       
       const allIds = Array.from(new Set([...memberIds, ...payerIds]));
-      // Otimização: Evitar chamadas se já tivermos os usuários (opcional, mantive sua lógica original)
       const usersPromises = allIds.map(id => this.usersService.getUserById(id));
       const users = await Promise.all(usersPromises);
 
@@ -94,20 +91,17 @@ export class Home {
     });
   }
 
-  // --- Computeds baseados na API (Muito mais limpo!) ---
+  // --- Computeds baseados na API ---
 
   netBalance = computed(() => {
-    // O backend já manda o saldo total calculado
     return this.analysisData()?.totalBalance || 0;
   });
 
   owedToUser = computed(() => {
-    // O backend já manda quanto devem a mim
     return this.analysisData()?.totalOwedToMe || 0;
   });
 
   userOwes = computed(() => {
-    // O backend já manda quanto eu devo
     return this.analysisData()?.totalOwedByMe || 0;
   });
 
@@ -122,7 +116,7 @@ export class Home {
     return { labels, data };
   });
 
-  // --- Computeds Visuais (Mantidos no front pois dependem de data/hora recente) ---
+  // --- Computeds Visuais ---
 
   private allExpenses = computed(() => {
     const usersMap = new Map(this.allUsers().map(u => [u.uid, u.name]));
@@ -179,7 +173,6 @@ export class Home {
     try {
       await this.groupService.joinGroup(groupId.trim());
       alert(`Sucesso! Você agora está no grupo!`);
-      // O effect vai disparar e atualizar a análise automaticamente
     } catch (error: any) {
       console.error("Erro ao entrar no grupo:", error);
       if (error.message.includes('Grupo não encontrado')) {
@@ -207,14 +200,13 @@ export class Home {
       
       this.groupService.createExpense({
         description: expenseData.description,
-        value: expenseData.value, // O backend espera float, o form envia number, ok.
+        value: expenseData.value,
         category: expenseData.category,
         groupId: expenseData.groupId
       }).then(async () => {
         this.addExpenseLoading.set(false);
         this.closeAddExpenseModal();
         
-        // Opcional: Forçar refresh imediato da análise
         const analysis = await this.analyticsService.getGeneralAnalysis();
         this.analysisData.set(analysis);
 
